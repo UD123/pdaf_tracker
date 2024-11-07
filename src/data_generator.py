@@ -203,7 +203,7 @@ class DataGenerator:
         cover_data = np.vstack([yy1, yy2]).T
         return cover_data
     
-    def init_data(self, par):
+    def init_data(self, par = None):
         """
         Initializes data for multiple tracking models.
 
@@ -217,8 +217,9 @@ class DataGenerator:
                 - Time: Total time
 
         Returns:
-            AllTheData: A numpy array containing the initialized data.
+            yc  : 2 x Time x PointNum -  numpy array containing the initialized data.
         """
+        par         = self.params if par is None else par
 
         # Check for missing parameters
         if not all(field in par for field in ['TrajIndex', 'Nv', 'PointNum', 'NaNDensity']):
