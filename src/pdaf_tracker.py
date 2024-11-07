@@ -39,10 +39,6 @@ class PDAF:
         # params
         self.params          = self.init_parameters()
 
-        # show
-        self.fig             = None
-        self.ax              = None
-
         self.tprint(f'Created')
 
     def init_parameters(self):
@@ -361,6 +357,47 @@ class PDAF:
             trackList[UnDefinedTrackInd[i]]["Hist"]     = np.zeros_like(trackList[UnDefinedTrackInd[i]]["Hist"])
 
         return trackList
+    
+    def  show_init(self, ax = None, fig = None):
+        # init 3D scene
+        if ax is None or fig is None:
+            fig = plt.figure(1)
+            plt.clf() 
+            plt.ion() 
+            #fig.canvas.set_window_title('3D Scene')
+            ax = fig.add_subplot(projection='3d')
+            fig.tight_layout()
+            
+            #ax.set_proj_type('ortho')
+            
+            #self.ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            #self.ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            #self.ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+
+        #ax.set_aspect("equal")
+        plt.title('Data Points & Tracks')
+        plt.xlabel('X1')
+        plt.ylabel('X2')
+        ax = plt.gca()
+        ax.set_xlim([self.params["Y1Bounds"][0], self.params["Y1Bounds"][1]])
+        ax.set_ylim([self.params["Y2Bounds"][0], self.params["Y2Bounds"][1]])
+
+        #ax.set_xlabel('x')
+        #ax.set_ylabel('y')
+        #ax.set_zlabel('z')
+        
+        #ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+        #ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+        #ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+        
+        
+        #ax.set_title('Object Visualization')
+        plt.show()
+        self.Print('Scene rendering is done')
+        
+        self.fig    = fig
+        self.ax     = ax
+        return ax 
 
     def show_tracks_and_data(self, trackList, dataList, par):
         """
@@ -372,7 +409,7 @@ class PDAF:
             Par: Dictionary containing parameters.
         """
 
-        ShowFigNum  = 15
+        ShowFigNum  = 1
         #AxisSc      = [par["Y1Bounds"][0], par["Y2Bounds"][0], par["Y1Bounds"][1], par["Y2Bounds"][1]]
         SmallShift  = 5e-3
         NumSigma    = np.sqrt(par["GateLevel"])
@@ -490,9 +527,9 @@ class TestPDAF(unittest.TestCase):
         tlist   = p.init_tracks(par)
 
         # PDAF filtering loop
-        for k in range(ydata.shape[2]):
+        for k in range(ydata.shape[1]):
             # Get the data for time k
-            dataList = ydata[:, :, k]
+            dataList = ydata[:, k, :].squeeze()
             p.show_tracks_and_data(tlist, dataList, par)
             time.sleep(0.1)
 
@@ -502,15 +539,15 @@ class TestPDAF(unittest.TestCase):
     def test_association(self):
         "check tracker and data association"
         p       = PDAF()
-        par     = p.init_parameters()
         d       = DataGenerator()
+        par     = d.init_scenario(9)
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
 
         # PDAF filtering loop
-        for k in range(ydata.shape[2]):
+        for k in range(ydata.shape[1]):
             # Get the data for time k
-            dlist = ydata[:, :, k]
+            dlist = ydata[:, k, :].reshape((2,-1))
             tlist = p.track_association(tlist, dlist, par)
             #tlist = p.track_start(tlist, dlist, par)
             p.show_tracks_and_data(tlist, dlist, par)

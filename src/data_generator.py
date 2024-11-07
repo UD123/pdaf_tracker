@@ -60,7 +60,11 @@ class DataGenerator:
         elif scene_type == 8: # missing data
             Par["TrajIndex"]    = [1] 
             Par['PointNum']     = 1  
-            Par['NaNDensity']   = 0.1            
+            Par['NaNDensity']   = 0.1  
+        elif scene_type == 9: # straight line
+            Par["TrajIndex"]    = [9] 
+            Par['PointNum']     = 1  
+            Par['Time']         = 10                    
         else: 
             # default
             pass
@@ -125,10 +129,10 @@ class DataGenerator:
             y       = np.repeat(tmp, N, axis=0)
 
         elif TrajType == 9:  # Straight line from left upper to right lower
-            LeftH = 0.95
-            RightH = 0.05
-            x = np.linspace(LeftH, RightH, N).reshape((-1,1))
-            y = np.hstack((t / Time, x))
+            LeftH   = 0.95
+            RightH  = 0.05
+            x       = np.linspace(LeftH, RightH, N).reshape((-1,1))
+            y       = np.hstack((t / Time, x))
 
         elif TrajType == 10:  # Straight line from left lower to right upper
             LeftH = 0.05
@@ -157,52 +161,6 @@ class DataGenerator:
 
         return y, t, dT 
  
-    def add_noise(self, img_gray, noise_percentage = 0.01):
-        "salt and pepper noise"
-        if noise_percentage < 0.001:
-            return img_gray
-
-
-        # # Get the image size (number of pixels in the image).
-        # img_size = img_gray.size
-
-        # # Set the percentage of pixels that should contain noise
-        # #noise_percentage = 0.1  # Setting to 10%
-
-        # # Determine the size of the noise based on the noise precentage
-        # noise_size = int(noise_percentage*img_size)
-
-        # # Randomly select indices for adding noise.
-        # random_indices = np.random.choice(img_size, noise_size)
-
-        # # Create a copy of the original image that serves as a template for the noised image.
-        img_noised = img_gray.copy()
-
-        # # Create a noise list with random placements of min and max values of the image pixels.
-        # #noise = np.random.choice([img_gray.min(), img_gray.max()], noise_size)
-        # noise = np.random.choice([-10, 10], noise_size)
-
-        # # Replace the values of the templated noised image at random indices with the noise, to obtain the final noised image.
-        # img_noised.flat[random_indices] += noise
-        
-        self.tprint('adding noise')
-        return img_noised
- 
-    def create_point_cover_2d(self, par):
-        "creates evently districbuted cover of points"
-        # Distribute trackers evenly over the measurement space
-        dy1        = par["Y1Bounds"][1] - par["Y1Bounds"][0]
-        dy2        = par["Y2Bounds"][1] - par["Y2Bounds"][0]
-        TrackNumY1 = max(1, int(np.sqrt(dy1 / dy2 * par["TrackNum"])))
-        TrackNumY2 = int(np.ceil(par["TrackNum"] / TrackNumY1))
-
-        yy1, yy2 = np.meshgrid(
-            np.linspace(par["Y1Bounds"][0] + dy1 / TrackNumY1 / 2, par["Y1Bounds"][1], TrackNumY1),
-            np.linspace(par["Y2Bounds"][0] + dy2 / TrackNumY2 / 2, par["Y2Bounds"][1], TrackNumY2)
-        )
-        cover_data = np.vstack([yy1, yy2]).T
-        return cover_data
-    
     def init_data(self, par = None):
         """
         Initializes data for multiple tracking models.
@@ -302,7 +260,7 @@ class TestDataGenerator(unittest.TestCase):
     def test_init_data(self):
         "init multipe trajectories "
         d           = DataGenerator()
-        par         = d.init_scenario(8) # 1,2,3,4,5,6,7
+        par         = d.init_scenario(9) # 1,2,3,4,5,6,7,8
         y,t         = d.init_data(par)
 
         d.show_points_2d(y, t)
