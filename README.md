@@ -26,15 +26,15 @@ You are invited to try and comment me on this code.
 The motion of the points couild have differnt patterns and trajectroies.
 The trajectory may have noise, missing data and clutter.
 
-Single with Noise   | Multiple Trajectories | Complex trajectories |
+Simple Trajectory   | Trajectories with Missing Data | Trajectories with Noise |
 :------------: |  :----------: | :-------------:  |
-[![Trajectories](doc/circle.png)]  | [![Trackers](doc/circle_miss.png)]  | [![Results](doc/circle_noise.png)]  |
+![Trajectories](doc/circle.png)  | ![Trackers](doc/circle_miss.png)  | ![Results](doc/circle_noise.png)  |
 
 Trajectroies of points could vary , which in turn affects velocity and acceleration to be estimated
 
-Circle with Noise   | Multiple Trajectories | Complex trajectories |
+Trajectory with Clutter   | Multiple Trajectories | Complex Trajectories |
 :------------: |  :----------: | :-------------:  |
-[![Trajectories](doc/plot2d.png)]  | [![Trackers](doc/plot2d_2traj.png)]  | [![Results](doc/plot2d_8.png)]  |
+![Trajectories](doc/plot2d.png)  | ![Trackers](doc/plot2d_2traj.png)  | ![Results](doc/plot2d_8.png)  |
 
 # Usage:
 
