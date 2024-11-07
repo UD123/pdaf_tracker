@@ -21,6 +21,15 @@ This code could be extended to multiple dimensions, target moving profiles and n
 
 You are invited to try and comment me on this code.
 
+# Example
+
+Differnt trajectroies
+
+
+Trajectories   | Trackers | Results |
+:------------: |  :----------: | :-------------:  |
+[![Trajectories](doc/plot2d.png)]  | [![Trackers](doc/plot2d_2traj.png)]  | [![Results](doc/plot2d.png)]  |
+
 
 # Usage:
 
