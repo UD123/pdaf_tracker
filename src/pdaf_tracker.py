@@ -25,8 +25,7 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 import unittest
-from utils import logger, config_parameters, TrackState
-#from kalman_filter import KalmanFilter 
+from utils import logger, config_parameters
 from data_generator import DataGenerator
 from track_object import TrackingObject
 
@@ -39,11 +38,6 @@ class PDAF:
 
         # params
         self.params          = self.init_parameters()
-        self.data_mngr       = DataGenerator()
-
-        # show
-        self.fig             = None
-        self.ax              = None
 
         self.tprint(f'Created')
 
@@ -59,56 +53,21 @@ class PDAF:
         track_num           = par['TrackNum']
         self.tprint(f'Track number : {track_num}')
         return par     
-    
 
-    def init_data(self, par = None):
-        """
-        Initializes data for multiple tracking models.
+    def create_point_cover_2d(self, par):
+        "creates evently districbuted cover of points"
+        # Distribute trackers evenly over the measurement space
+        dy1        = par["Y1Bounds"][1] - par["Y1Bounds"][0]
+        dy2        = par["Y2Bounds"][1] - par["Y2Bounds"][0]
+        TrackNumY1 = max(1, int(np.sqrt(dy1 / dy2 * par["TrackNum"])))
+        TrackNumY2 = int(np.ceil(par["TrackNum"] / TrackNumY1))
 
-        Args:
-            Par: A dictionary containing parameters:
-                - TrajIndex: Trajectory indices
-                - Nv: Noise variance
-                - PointNum: Number of points
-                - NaNDensity: Density of missing points
-                - dT: Time step
-                - Time: Total time
-
-        Returns:
-            AllTheData: A numpy array containing the initialized data.
-        """
-        par         = self.params if par is None else par
-
-        # Check for missing parameters
-        if not all(field in par for field in ['TrajIndex', 'Nv', 'PointNum', 'NaNDensity']):
-            raise ValueError("Missing required fields in Par.")
-
-        # Generate trajectories and clutter
-        y, t, dT    = self.data_mngr.generate_trajectories(par['TrajIndex'][0], par['dT'], par['Time'])  # Assuming Generate2DTrajectories is defined
-        yc          = np.random.rand(y.shape[0],  y.shape[1], par['PointNum'],)
-
-        # Ensure enough points for trajectories
-        if par['PointNum'] < par['TrajNum']:
-            self.tprint("There are more trajectories than points.")
-            par['PointNum'] = par['TrajNum'] + 1
-
-        # Random permutation
-        RandPermTraj = np.random.permutation(par['PointNum'])
-
-        # Initialize trajectories
-        for i in range(par['TrajNum']):
-            ytmp, t, dT = self.data_mngr.generate_trajectories(par['TrajIndex'][i], par['dT'], par['Time'])  # Assuming Generate2DTrajectories is defined
-            yc[:,:, RandPermTraj[i]] = ytmp #.reshape((-1,2))
-            #yc[:, RandPermTraj[i], 1] = ytmp[:,1].reshape((-1,1))
-
-        # Add noise
-        yc             += np.random.randn(*yc.shape) * par['Nv']
-
-        # Generate missing points
-        miss_ind        = np.random.rand(*yc.shape) < par['NaNDensity']
-        yc[miss_ind]    = np.nan
-
-        return yc                 
+        yy1, yy2 = np.meshgrid(
+            np.linspace(par["Y1Bounds"][0] + dy1 / TrackNumY1 / 2, par["Y1Bounds"][1], TrackNumY1),
+            np.linspace(par["Y2Bounds"][0] + dy2 / TrackNumY2 / 2, par["Y2Bounds"][1], TrackNumY2)
+        )
+        cover_data = np.vstack([yy1, yy2]).T
+        return cover_data                
 
     def init_tracks(self, par = None):
         """
@@ -136,7 +95,7 @@ class PDAF:
         # )
         # centerData = np.vstack([yy1, yy2]).T
 
-        centerData = self.data_mngr.create_point_cover_2d(par)
+        centerData = self.create_point_cover_2d(par)
 
         # Initialize the track list
         trackList = []
@@ -398,6 +357,47 @@ class PDAF:
             trackList[UnDefinedTrackInd[i]]["Hist"]     = np.zeros_like(trackList[UnDefinedTrackInd[i]]["Hist"])
 
         return trackList
+    
+    def  show_init(self, ax = None, fig = None):
+        # init 3D scene
+        if ax is None or fig is None:
+            fig = plt.figure(1)
+            plt.clf() 
+            plt.ion() 
+            #fig.canvas.set_window_title('3D Scene')
+            ax = fig.add_subplot(projection='3d')
+            fig.tight_layout()
+            
+            #ax.set_proj_type('ortho')
+            
+            #self.ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            #self.ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+            #self.ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+
+        #ax.set_aspect("equal")
+        plt.title('Data Points & Tracks')
+        plt.xlabel('X1')
+        plt.ylabel('X2')
+        ax = plt.gca()
+        ax.set_xlim([self.params["Y1Bounds"][0], self.params["Y1Bounds"][1]])
+        ax.set_ylim([self.params["Y2Bounds"][0], self.params["Y2Bounds"][1]])
+
+        #ax.set_xlabel('x')
+        #ax.set_ylabel('y')
+        #ax.set_zlabel('z')
+        
+        #ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+        #ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+        #ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+        
+        
+        #ax.set_title('Object Visualization')
+        plt.show()
+        self.Print('Scene rendering is done')
+        
+        self.fig    = fig
+        self.ax     = ax
+        return ax 
 
     def show_tracks_and_data(self, trackList, dataList, par):
         """
@@ -409,7 +409,7 @@ class PDAF:
             Par: Dictionary containing parameters.
         """
 
-        ShowFigNum  = 15
+        ShowFigNum  = 1
         #AxisSc      = [par["Y1Bounds"][0], par["Y2Bounds"][0], par["Y1Bounds"][1], par["Y2Bounds"][1]]
         SmallShift  = 5e-3
         NumSigma    = np.sqrt(par["GateLevel"])
@@ -511,8 +511,10 @@ class TestPDAF(unittest.TestCase):
     def test_create(self):
         "check create and data generation"
         p       = PDAF()
-        #par     = p.init_parameters()
-        ydata   = p.init_data()
+        par     = p.init_parameters()
+        d       = DataGenerator()
+        ydata,t = d.init_data(par)      
+
         p.finish()
         self.assertTrue(len(ydata) > 0) 
 
@@ -520,13 +522,14 @@ class TestPDAF(unittest.TestCase):
         "check create and data generation"
         p       = PDAF()
         par     = p.init_parameters()
-        ydata   = p.init_data(par)
+        d       = DataGenerator()
+        ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
 
         # PDAF filtering loop
-        for k in range(ydata.shape[2]):
+        for k in range(ydata.shape[1]):
             # Get the data for time k
-            dataList = ydata[:, :, k]
+            dataList = ydata[:, k, :].squeeze()
             p.show_tracks_and_data(tlist, dataList, par)
             time.sleep(0.1)
 
@@ -536,14 +539,15 @@ class TestPDAF(unittest.TestCase):
     def test_association(self):
         "check tracker and data association"
         p       = PDAF()
-        par     = p.init_parameters()
-        ydata   = p.init_data(par)
+        d       = DataGenerator()
+        par     = d.init_scenario(9)
+        ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
 
         # PDAF filtering loop
-        for k in range(ydata.shape[2]):
+        for k in range(ydata.shape[1]):
             # Get the data for time k
-            dlist = ydata[:, :, k]
+            dlist = ydata[:, k, :].reshape((2,-1))
             tlist = p.track_association(tlist, dlist, par)
             #tlist = p.track_start(tlist, dlist, par)
             p.show_tracks_and_data(tlist, dlist, par)

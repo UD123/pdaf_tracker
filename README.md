@@ -21,6 +21,20 @@ This code could be extended to multiple dimensions, target moving profiles and n
 
 You are invited to try and comment me on this code.
 
+# Trajectories Example
+
+The motion of the points couild have differnt patterns and trajectroies.
+The trajectory may have noise, missing data and clutter.
+
+Single with Noise   | Multiple Trajectories | Complex trajectories |
+:------------: |  :----------: | :-------------:  |
+[![Trajectories](doc/circle.png)]  | [![Trackers](doc/circle_miss.png)]  | [![Results](doc/circle_noise.png)]  |
+
+Trajectroies of points could vary , which in turn affects velocity and acceleration to be estimated
+
+Circle with Noise   | Multiple Trajectories | Complex trajectories |
+:------------: |  :----------: | :-------------:  |
+[![Trajectories](doc/plot2d.png)]  | [![Trackers](doc/plot2d_2traj.png)]  | [![Results](doc/plot2d_8.png)]  |
 
 # Usage:
 
