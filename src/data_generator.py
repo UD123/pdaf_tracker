@@ -46,7 +46,21 @@ class DataGenerator:
             Par['PointNum']     = 2       
         elif scene_type == 4:
             Par["TrajIndex"]    = [2,7] 
-            Par['PointNum']     = 3                   
+            Par['PointNum']     = 3     
+        elif scene_type == 5:
+            Par["TrajIndex"]    = [3,4] 
+            Par['PointNum']     = 2    
+        elif scene_type == 6: # clutter
+            Par["TrajIndex"]    = [5] 
+            Par['PointNum']     = 3                     
+        elif scene_type == 7: # noise
+            Par["TrajIndex"]    = [1] 
+            Par['PointNum']     = 1  
+            Par['Nv']           = 0.05
+        elif scene_type == 8: # missing data
+            Par["TrajIndex"]    = [1] 
+            Par['PointNum']     = 1  
+            Par['NaNDensity']   = 0.1            
         else: 
             # default
             pass
@@ -84,18 +98,18 @@ class DataGenerator:
             y       = np.hstack((tmp, t / Time))
 
         elif TrajType == 3:  # Spiral
-            R = 0.5 + 0.5 * np.sin(2 * np.pi / Time * t)
-            Ang = 2 * np.pi * t
-            y = 0.5 * np.array([R * np.cos(Ang), R * np.sin(Ang)]) + 0.5
+            R       = 0.5 + 0.5 * np.sin(2 * np.pi / Time * t)
+            Ang     = 2 * np.pi * t
+            y       = 0.5 * np.hstack((R * np.cos(Ang), R * np.sin(Ang))) + 0.5
 
         elif TrajType == 4:  # 8
             fx      = 0.5
             fy      = 1
-            y = 0.5 * np.array([np.cos(2 * np.pi * fx * t), np.sin(2 * np.pi * fy * t)]) + 0.5
+            y = 0.5 * np.hstack((np.cos(2 * np.pi * fx * t), np.sin(2 * np.pi * fy * t))) + 0.5
 
         elif TrajType == 5:  # Exponential
             SlopeV = 5
-            y       = np.array([1 - np.exp(-t / Time * SlopeV), t / Time])
+            y       = np.hstack((1 - np.exp(-t / Time * SlopeV), t / Time))
 
         elif TrajType == 6:  # Triangle
             y       = np.array([t / Time, np.triang(N).T])
@@ -253,8 +267,8 @@ class DataGenerator:
             ax.scatter(xs, ys, marker='.',color='C'+str(k))
 
 
-        ax.set_xlabel('X [mm]')
-        ax.set_ylabel('Y [mm]')
+        ax.set_xlabel('X [m]')
+        ax.set_ylabel('Y [m]')
         #ax.set_zlabel('Z [mm]')
         ax.set_aspect('equal', 'box')
         plt.show()        
@@ -287,7 +301,7 @@ class TestDataGenerator(unittest.TestCase):
     def test_init_data(self):
         "init multipe trajectories "
         d           = DataGenerator()
-        par         = d.init_scenario(4) # 1,2,3
+        par         = d.init_scenario(8) # 1,2,3,4,5,6,7
         y,t         = d.init_data(par)
 
         d.show_points_2d(y, t)
