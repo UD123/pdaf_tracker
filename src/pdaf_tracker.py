@@ -159,7 +159,7 @@ class PDAF:
             
         return trackList        
     
-    def track_update(trackList, dataList, par):
+    def track_update(self, trackList, dataList, par):
         """
         Performs track update using a Kalman filter (PDAF optional).
 
@@ -551,6 +551,30 @@ class TestPDAF(unittest.TestCase):
             time.sleep(0.1)
 
         p.finish()
+        self.assertTrue(len(ydata) > 0)    
+        
+    def test_update(self):
+        "check tracker update and data association"
+        p       = PDAF()
+        d       = DataGenerator()
+        s       = DataDisplay()
+        
+        par     = d.init_scenario(9)
+        ydata,t = d.init_data(par)    
+        tlist   = p.init_tracks(par)
+        ax      = s.init_show(par)
+
+        # PDAF filtering loop
+        for k in range(ydata.shape[1]):
+            # Get the data for time 2 x k x point_num
+            dlist       = ydata[:, k, :].reshape((2,-1))
+            tlist       = p.track_association(tlist, dlist, par)
+            tlist       = p.track_update(tlist, dlist, par)
+            
+            s.show_info(tlist, dlist)
+            time.sleep(0.1)
+
+        p.finish()
         self.assertTrue(len(ydata) > 0)          
 
 # --------------------------------
@@ -560,7 +584,8 @@ def RunTest():
     suite = unittest.TestSuite()
     #suite.addTest(TestPDAF("test_create")) # ok
     #suite.addTest(TestPDAF("test_show_data")) # ok
-    suite.addTest(TestPDAF("test_association")) 
+    #suite.addTest(TestPDAF("test_association")) 
+    suite.addTest(TestPDAF("test_update")) 
 
     
     

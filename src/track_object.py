@@ -161,9 +161,9 @@ class TrackingObject:
         GateLevel   = self.params["GateLevel"]
 
         if self.params["UsePDAF"]:
-            ret = self.kf.update_pdaf(self, y, PG, PD, GateLevel) 
+            ret = self.kf.update_pdaf(y, PG, PD, GateLevel) 
         else:
-            ret = self.kf.update(self, y)
+            ret = self.kf.update(y)
 
         return ret  
 
