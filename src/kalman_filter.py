@@ -11,9 +11,6 @@ Estimates point position and velocity in 2D and 3D.
 
 Usage:
 
-Environemt : 
-    C:\\Users\\udubin\\Documents\\Envs\\safety
-
 Install : 
     See README.md
 
@@ -54,7 +51,7 @@ class KalmanFilter:
         # information display
         self.debug_level  = 0
 
-        self.tprint('Tracker is initialized')
+        logger.debug('Kalman Filter is initialized')
 
     def init_kalman_filter(self, dT, ModelDim, ProbDim, StateVar, ObserVar=0.01):
         """
@@ -118,7 +115,7 @@ class KalmanFilter:
         data    = data.reshape((-1,1))
         if dim_num != data.shape[0]:
             raise ValueError('input data must be 2 dimensional')
-            #self.tprint('input data must be 2 dimensional','E')
+            #logger.debug('input data must be 2 dimensional','E')
         
         # state position
         self.x[self.observ_index + 0] = data # position in 2D/3D
@@ -171,7 +168,7 @@ class KalmanFilter:
         self.P          = Pnew
 
         # performance indicator
-        self.loglike    = etot.T @ Sinv @ etot
+        self.loglike    = (etot.T @ Sinv @ etot).squeeze()
 
         return True
     
@@ -221,7 +218,7 @@ class KalmanFilter:
 
     def finish(self):
         # Close down 
-        self.tprint('Finished')
+        logger.debug('Finished')
 
 
     def tprint(self, txt = '', level = 'I'):

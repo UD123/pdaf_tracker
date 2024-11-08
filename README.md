@@ -7,8 +7,9 @@ Multiple point tracker in 2D and 3D using Probability Density Approximation Filt
 Using IPDAF Filters to predict, track and estimate position of multiple points.
 It can deal with occlusion, tracking loss, intersection and different point motion profiles.
 
-This code is a demo that implements multiple target tracking in 2 and 3 dimensions. 
+This code implements multiple target tracking in 2 and 3 dimensions using Numpy only. 
 It is inspired by work of Y. Bar-Shalom related to Probabilistic Data Association Filters (PDAF).
+
 Main file "pdaf_tracker.py" does the following:
 1. Generates number of points moving on different trajectories.
 2. Adds clutter and noisy points.
@@ -23,10 +24,12 @@ However, some shortcuts are made. Several parameters control the behavior of the
 
 You are invited to try and comment me on this code.
 
-# Trajectories Example
+# Trajectories 
 
 The motion of the points couild have differnt patterns and trajectroies.
 The trajectory may have noise, missing data and clutter.
+File "data_generator.py" contains function "init_scenario()" that allows to select the trajectories, noise and clutter as below.
+
 
 Simple Trajectory   | Trajectories with Missing Data | Trajectories with Noise |
 :------------: |  :----------: | :-------------:  |

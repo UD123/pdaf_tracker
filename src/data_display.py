@@ -50,7 +50,7 @@ class DataDisplay:
         self.h_circle   = None        
         self.h_history  = None            
 
-        self.tprint(f'Created')
+        logger.debug(f'Created')
       
     def init_show(self, par = None): 
         # init 2D/3D scene
@@ -116,7 +116,7 @@ class DataDisplay:
         self.fig    = fig
         self.plt    = plt
         self.ax     = ax
-        self.tprint('Scene rendering is done')
+        logger.debug('Scene rendering is done')
         return ax 
     
     def draw_data(self, dataList):

@@ -28,15 +28,15 @@ class DataGenerator:
 
         self.params      = config_parameters()
 
-        self.tprint('Created')
+        logger.debug('Created')
 
     def init_scenario(self, scene_type = 1):
         "changes parameters to create different scenes"
         "TrajIndex - list that contains different trajectories "
         "PointNum  - must be bigger than TrajIndex list. if PointNum > len(TrajIndex) may create some clutter points"
         Par         = self.params
-        if scene_type == 1:
-            Par["TrajIndex"]    = [1] 
+        if scene_type == 1: # fixed point
+            Par["TrajIndex"]    = [8] 
             Par['PointNum']     = 1
         elif scene_type == 2:
             Par["TrajIndex"]    = [7] 
@@ -64,15 +64,17 @@ class DataGenerator:
         elif scene_type == 9: # straight line
             Par["TrajIndex"]    = [9] 
             Par['PointNum']     = 2  
-            Par['Time']         = 3    
+            Par['Time']         = 3  
+
              
         else: 
             # default
             pass
             
-        Par["TrajNum"]      = len(Par["TrajIndex"])            
+        Par["TrajNum"]      = t_num = len(Par["TrajIndex"])  
+        p_num               = Par['PointNum']           
         self.params         = Par
-        self.tprint(f"Generating scene {scene_type}")
+        logger.debug(f"Generating scene {scene_type} : trajectories {t_num}, points {p_num} ")
         return Par
 
     def generate_trajectories(self, TrajType=1, dT=1/30, Time=3):
@@ -190,7 +192,7 @@ class DataGenerator:
 
         # Ensure enough points for trajectories
         if par['PointNum'] < par['TrajNum']:
-            self.tprint("There are more trajectories than points.")
+            logger.debug("There are more trajectories than points.")
             par['PointNum'] = par['TrajNum'] + 1
 
         # Random permutation

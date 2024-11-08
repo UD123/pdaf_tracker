@@ -11,8 +11,6 @@ Estimates single point position and velocity in 2D and 3D.
 
 Usage:
 
-Environemt : 
-    C:\\Users\\udubin\\Documents\\Envs\\safety
 
 Install : 
     See README.md
@@ -50,7 +48,7 @@ class TrackingObject:
         self.history        = np.zeros((self.kf.F.shape[0], self.history_length))
         self.log_like       = params["GateLevel"]
 
-        self.tprint('Tracker is initialized')
+        logger.debug(f'Tracker {track_id} is initialized')
 
     def init_state(self, data):
         "initializes the position of the tracker"
@@ -58,30 +56,12 @@ class TrackingObject:
         self.state          = TrackState.FIRST_INIT
         self.life_time      = 0
         self.history        = np.zeros((self.kf.F.shape[0], self.history_length))
+
+        logger.debug(f'Tracker {self.id} in state {self.state} : initialized with a new data')
         return True
     
-    def extract_data(self, dataList):
-        "extracts the relevant data : data - 2xN - total data at time t"
-        # check if any data is associated - otherwise take prediction
-        if len(self.data_ind) < 1:
-            ydata , stam = self.predict()
-        else:
-            ydata        = dataList[:,self.data_ind]
 
-        # if not PDAF mode - average all the points in the detected range
-        if self.params["UsePDAF"]:
-            ydata = np.mean(ydata, axis=1)
-
-        return ydata
-    
-    def init_velocity(self, ydata):
-        "initializes the velocity of the tracker"
-
-        if self.state == TrackState.FIRST_INIT:
-            y       = np.mean(ydata, axis=1)
-            self.kf.init_velocity(y)
-
-        return True    
+   
     
     def check_valid(self):
         "check if the states are defined"
@@ -110,6 +90,14 @@ class TrackingObject:
         "computes the next state according the data association and the current state"
         # Check for associated data
 
+        # during association of a single point - list of integers must be provided
+        # UGLY - REDO
+        if not isinstance(self.data_ind, list):
+            if isinstance(self.data_ind, np.ndarray):
+                self.data_ind = list(self.data_ind)  # numpy array transroms to list
+            else:
+                self.data_ind = [self.data_ind]
+
         no_data_associated  = len(self.data_ind) < 1
         state_current       = self.state
         state_next          = self.state
@@ -117,9 +105,10 @@ class TrackingObject:
         if no_data_associated:
             # No data associated
             if state_current == TrackState.UNDEFINED:
-                raise ValueError("Undefined track")
+                pass # do nothing
             elif TrackState.FIRST_INIT <= state_current and state_current <= TrackState.LAST_INIT:
-                # Initialization states - no data - delete the tracker
+                # tracker must have data during init stage. Initialization states - no data - delete the tracker.
+                # this filters random noise tracking initialization.
                 state_next = TrackState.UNDEFINED  # Reset initialization
             elif TrackState.FIRST_COAST <= state_current and state_current < TrackState.LAST_COAST: 
                 # Coast mode states : all coast states except the last one
@@ -127,32 +116,58 @@ class TrackingObject:
             elif state_current == TrackState.LAST_COAST:
                 # Final coast mode state
                 state_next = TrackState.UNDEFINED  # Reset track
-                self.tprint('Deleted')
+                logger.debug(f'Track {self.id} is deleted - lost data to track')
             else:
                 # Track state
                 state_next = TrackState.FIRST_COAST  # First coast mode state
-                self.tprint('Coast Mode')
+                logger.debug(f'Track {self.id} enteres Coast Mode')
         else:
             # Data associated
             if state_current == TrackState.UNDEFINED:
-                raise ValueError("Undefined track")
+                 # data is assigned to this tracker
+                 state_next = TrackState.FIRST_INIT
+                 logger.debug(f'Track {self.id} is created')
             elif TrackState.FIRST_INIT <= state_current and state_current < TrackState.LAST_INIT:
                 # Initialization states
                 state_next = state_current + 1  # Next initialization state
             elif state_current == TrackState.LAST_INIT:
                 # Last initialization state
                 state_next = TrackState.TRACKING  # Next track state
-                self.tprint('From Init to Tracking')
+                logger.debug(f'Track {self.id} goes from Init to Tracking')
             elif TrackState.FIRST_COAST <= state_current and state_current <= TrackState.LAST_COAST: 
                 # Coast mode states
                 state_next = TrackState.TRACKING  # Return to track state
-                self.tprint('From Coast to Tracking')
+                logger.debug(f'Track {self.id} goes From Coast to Tracking')
             else:
                 # Track state
                 state_next = TrackState.TRACKING  # Stay in track state
 
         self.state = state_next
         return 
+    
+    def extract_data(self, dataList):
+        "extracts the relevant data : data - 2xN - total data at time t"
+        # check if any data is associated - otherwise take prediction
+        if len(self.data_ind) < 1:
+            ydata , stam = self.predict()
+        else:
+            ydata        = dataList[:,self.data_ind]
+
+        # if not PDAF mode - average all the points in the detected range
+        if self.params["UsePDAF"] < 0.5:
+            ydata = np.mean(ydata, axis=1, keepdims = True)
+
+        return ydata    
+    
+    
+    def init_velocity(self, ydata):
+        "initializes the velocity of the tracker"
+
+        if self.state == TrackState.FIRST_INIT:
+            y       = np.mean(ydata, axis=1)
+            self.kf.init_velocity(y)
+
+        return True     
 
     def update(self, y):
         "predicting the state and computing the update"
@@ -204,7 +219,7 @@ class TrackingObject:
 
     def finish(self):
         # Close down 
-        self.tprint('Finished')
+        logger.debug('Finished')
 
     def tprint(self, txt = '', level = 'I'):
         txt = '%03d : %s' %(self.id, txt)

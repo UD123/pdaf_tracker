@@ -30,11 +30,10 @@ logger         = logging.getLogger("pdaf")
 # Check if a logger named 'my_logger' is already defined
 if not logger.handlers:
     # Logger is not configured, so configure it
-    #logging.basicConfig(filename='my_app.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     #formatter   = logging.Formatter('[%(asctime)s.%(msecs)03d] {%(filename)6s:%(lineno)3d} %(levelname)s - %(message)s', datefmt="%M:%S", style="{")
-    #formatter       = logging.Formatter('[%(asctime)s] - [%(filename)16s:%(lineno)3d] - %(levelname)s - %(message)s')
-    formatter       = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
+    formatter       = logging.Formatter('[%(asctime)s] - [%(filename)18s:%(lineno)3d] - %(levelname)5s - %(message)s')
+    #formatter       = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
     logger.setLevel("DEBUG")
     
     console_handler = logging.StreamHandler()
@@ -42,10 +41,10 @@ if not logger.handlers:
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-# file_handler = logging.FileHandler("main_app.log", mode="a", encoding="utf-8")
-# file_handler.setLevel("WARNING")
-# file_handler.setFormatter(formatter)
-# logger.addHandler(file_handler)
+    file_handler = logging.FileHandler("pdaf_tracking.log", mode="a", encoding="utf-8")
+    file_handler.setLevel("WARNING")
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
 #%% 
 class TrackState:
