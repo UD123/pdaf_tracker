@@ -26,15 +26,21 @@ import numpy as np
 
 import logging 
 logger         = logging.getLogger("pdaf")
-#formatter   = logging.Formatter('[%(asctime)s.%(msecs)03d] {%(filename)6s:%(lineno)3d} %(levelname)s - %(message)s', datefmt="%M:%S", style="{")
-#formatter       = logging.Formatter('[%(asctime)s] - [%(filename)16s:%(lineno)3d] - %(levelname)s - %(message)s')
-formatter       = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
-logger.setLevel("DEBUG")
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel("DEBUG")
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+# Check if a logger named 'my_logger' is already defined
+if not logger.handlers:
+    # Logger is not configured, so configure it
+    #logging.basicConfig(filename='my_app.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    #formatter   = logging.Formatter('[%(asctime)s.%(msecs)03d] {%(filename)6s:%(lineno)3d} %(levelname)s - %(message)s', datefmt="%M:%S", style="{")
+    #formatter       = logging.Formatter('[%(asctime)s] - [%(filename)16s:%(lineno)3d] - %(levelname)s - %(message)s')
+    formatter       = logging.Formatter('[%(asctime)s] - %(levelname)s - %(message)s')
+    logger.setLevel("DEBUG")
+    
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel("DEBUG")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
 # file_handler = logging.FileHandler("main_app.log", mode="a", encoding="utf-8")
 # file_handler.setLevel("WARNING")
@@ -69,7 +75,7 @@ def config_parameters():
 
     # Init data and tracks
     Par["TrajIndex"]    = [12, 11, 8]  # Max 7 trajectories
-    Par["PointNum"]     = 9  # More points than trajectories
+    Par["PointNum"]     = 2  # More points than trajectories
     Par["NaNDensity"]   = 0.0  # Density of missing points
     Par["Y1Bounds"]     = [0, 1]  # Approximate bounds for Y1 measurements
     Par["Y2Bounds"]     = [0, 1]  # Approximate bounds for Y2 measurements
@@ -80,10 +86,10 @@ def config_parameters():
 
     # Kalman filter properties
     Par["StateVar"]     = (0.5)**2  # State variance
-    Par["ObserVar"]     = (0.01)**2  # Observation variance
+    Par["ObserVar"]     = (0.1)**2  # Observation variance
 
     # Track properties
-    Par["TrackNum"]     = 5  # Number of trackers
+    Par["TrackNum"]     = 1  # Number of trackers
     Par["ProbDim"]      = 2  # Problem dimensionality (x, x-y, or x-y-z)
     Par["ModelDim"]     = 2  # Constant velocity or constant acceleration
     Par["HistLen"]      = 3  # Number of past states for each tracker

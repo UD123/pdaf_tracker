@@ -84,7 +84,7 @@ class KalmanFilter:
             Qtmp = np.array([[dT**4/4, dT**3/2], [dT**3/2, dT**2]]) * StateVar
             Rtmp = ObserVar * np.eye(1)
             xtmp = np.zeros((2, 1))
-            Ptmp = Qtmp * 10
+            Ptmp = Qtmp * 100
 
         elif ModelDim == 3:
             Ftmp = np.array([[1, dT, dT**2/2], [0, 1, dT], [0, 0, 1]])

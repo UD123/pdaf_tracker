@@ -49,7 +49,7 @@ class DataGenerator:
             Par['PointNum']     = 3     
         elif scene_type == 5:
             Par["TrajIndex"]    = [3,4] 
-            Par['PointNum']     = 2    
+            Par['PointNum']     = 2                 
         elif scene_type == 6: # clutter
             Par["TrajIndex"]    = [5] 
             Par['PointNum']     = 3                     
@@ -63,8 +63,9 @@ class DataGenerator:
             Par['NaNDensity']   = 0.1  
         elif scene_type == 9: # straight line
             Par["TrajIndex"]    = [9] 
-            Par['PointNum']     = 1  
-            Par['Time']         = 10                    
+            Par['PointNum']     = 2  
+            Par['Time']         = 3    
+             
         else: 
             # default
             pass

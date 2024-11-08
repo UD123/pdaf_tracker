@@ -102,7 +102,7 @@ class TrackingObject:
         ypred, Spred = self.kf.predict()
 
         # compute distance
-        dist = gaussian_prob(data, ypred, Spred, 2)
+        dist         = gaussian_prob(data, ypred, Spred, 2)
 
         return dist
     
@@ -193,6 +193,14 @@ class TrackingObject:
             
         self.log_like = (1 - alpha) * self.log_like + alpha * log_like
         return True 
+    
+    def get_show_info(self):
+        "extract information useful for show"
+        
+        ypred, Spred = self.kf.predict()
+        yhist        = self.history[self.observ_index,:] 
+        
+        return ypred, Spred, yhist
 
     def finish(self):
         # Close down 
