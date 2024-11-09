@@ -192,6 +192,9 @@ class PDAF:
             # extract associated data
             ydata   = track.extract_data(dataList)
 
+            # Init state of the first time created
+            ret     = track.init_state(ydata)            
+
             # Init velocity if data is OK and extract the relevant part
             ret     = track.init_velocity(ydata)
 

@@ -50,19 +50,8 @@ class TrackingObject:
 
         logger.debug(f'Tracker {track_id} is initialized')
 
-    def init_state(self, data):
-        "initializes the position of the tracker"
-        self.kf.init_state(data)
-        self.state          = TrackState.FIRST_INIT
-        self.life_time      = 0
-        self.history        = np.zeros((self.kf.F.shape[0], self.history_length))
 
-        logger.debug(f'Tracker {self.id} in state {self.state} : initialized with a new data')
-        return True
-    
 
-   
-    
     def check_valid(self):
         "check if the states are defined"
         return self.state != TrackState.UNDEFINED
@@ -159,6 +148,16 @@ class TrackingObject:
 
         return ydata    
     
+    def init_state(self, data):
+        "initializes the position of the tracker"
+        if self.state == TrackState.FIRST_INIT:
+            self.kf.init_state(data)
+            self.life_time      = 0
+            self.history        = np.zeros((self.kf.F.shape[0], self.history_length))
+
+            logger.debug(f'Tracker {self.id} in state {self.state} : initialized with a new data')
+            
+        return True    
     
     def init_velocity(self, ydata):
         "initializes the velocity of the tracker"
