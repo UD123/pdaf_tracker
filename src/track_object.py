@@ -45,7 +45,7 @@ class TrackingObject:
         self.observ_index   = [0, self.kf.F.shape[0] // 2] # which indx is an observtion variable in the state
 
         self.history_length = params["HistLen"]
-        self.history        = np.zeros((self.kf.F.shape[0], self.history_length))
+        self.history        = np.nan*np.empty((self.kf.F.shape[0], self.history_length))
         self.log_like       = params["GateLevel"]
 
         logger.debug(f'Tracker {track_id} is initialized')

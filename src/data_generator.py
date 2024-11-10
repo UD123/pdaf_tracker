@@ -38,15 +38,16 @@ class DataGenerator:
         if scene_type == 1: # fixed point
             Par["TrajIndex"]    = [8] 
             Par['PointNum']     = 1
-        elif scene_type == 2:
+        elif scene_type == 2: # straight line
+            Par["TrajIndex"]    = [9] 
+            Par['PointNum']     = 2
+        elif scene_type == 3: # variable speed
             Par["TrajIndex"]    = [7] 
-            Par['PointNum']     = 1
-        elif scene_type == 3:
-            Par["TrajIndex"]    = [7] 
-            Par['PointNum']     = 2       
-        elif scene_type == 4:
-            Par["TrajIndex"]    = [2,7] 
-            Par['PointNum']     = 3     
+            Par['PointNum']     = 3  
+            Par['Time']         = 5     
+        elif scene_type == 4:  # two intersecting trackers
+            Par["TrajIndex"]    = [9,10] 
+            Par['TrackNum']     = 2     
         elif scene_type == 5:
             Par["TrajIndex"]    = [3,4] 
             Par['PointNum']     = 2                 

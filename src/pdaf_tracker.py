@@ -218,59 +218,75 @@ class PDAF:
 
     def track_separation(self, trackList, dataList, par):
         """
-        Identifies and discards tracks with similar histories.
+        Identifies and discards tracks with similar histories. 
+        Prevents situation when two tracks follow the same point.
 
         Args:
             trackList: List of track objects.
             dataList: 2D array containing measurement data (time x measurements).
-            Par: Dictionary containing parameters.
+            par: Dictionary containing parameters.
 
         Returns:
             trackList: Updated list of track objects.
         """
 
-        TrackNum = par["TrackNum"]
-        HistGate = par["HistGateLevel"] * (par["Y1Bounds"][1] - par["Y1Bounds"][0]) * (par["Y2Bounds"][1] - par["Y2Bounds"][0])
+        hist_length = par["HistLen"]
+        TrackNum    = par["TrackNum"]
+        # dimension in which tracks could be different
+        HistGate    = par["HistGateLevel"] #* (par["Y1Bounds"][1] - par["Y1Bounds"][0]) * (par["Y2Bounds"][1] - par["Y2Bounds"][0])
 
-        # Calculate pairwise distances between track histories
-        HistDist = np.ones((TrackNum, TrackNum)) * 10000
-        for i in range(TrackNum - 1):
-            for j in range(i + 1, TrackNum):
-                HistDist[i, j] = np.sum(np.std(trackList[i].history - trackList[j].history, axis=1))
+        # Find trackers in tracking state and undefined tracks
+        valid_track_states = np.zeros((TrackNum,1),dtype = bool)
+        for k in range(TrackNum):
+            valid_track_states[k] = trackList[k].check_valid() 
 
-        SameTracks = HistDist < HistGate
-
-        # Identify valid tracks and their lifetimes
-        ValidTrackLabel = np.zeros(TrackNum, dtype=bool)
-        TracksLifeTime  = np.zeros(TrackNum)
-        for i in range(TrackNum):
-            if trackList[i].state != par["State_Undefined"]:
-                ValidTrackLabel[i] = True
-                TracksLifeTime[i]  = trackList[i].life_time
-
-        ValidTrackInd = np.where(ValidTrackLabel)[0]
-        ValidTrackLen = len(ValidTrackInd)
-        if ValidTrackLen == 0:
-            logger.info("Undefined States - check!!!")
+        valid_track_ind  = np.where(valid_track_states)[0]
+        valid_track_num  = len(valid_track_ind)   
+        if valid_track_num == 0:
+            logger.warning("Undefined States - check!!!")
             return trackList
         else:
-            logger.info(f"Valid state tracks number: {ValidTrackLen}")
+            logger.info(f"Valid state tracks number: {valid_track_num}")        
+
+        # extract life times - need to compare - older tracks will survive
+        valid_track_lifetime = np.zeros((valid_track_num,1))
+        for i in range(valid_track_num):
+            i_ind                   = valid_track_ind[i]
+            valid_track_lifetime    = trackList[i_ind].life_time
+
+        # Calculate pairwise distances between track histories
+        valid_track_dist            = np.ones((valid_track_num, valid_track_num)) * 1e6
+        for i in range(valid_track_num - 1):
+            i_ind          = valid_track_ind[i]
+            i_history      = trackList[i_ind].history
+            for j in range(i + 1, valid_track_num):
+                j_ind          = valid_track_ind[j]
+                j_history      = trackList[j_ind].history
+
+                # history contains nan - compare only numeric values in history vectors
+                min_life_time  = np.minimum(trackList[i_ind].life_time,trackList[j_ind].life_time)
+                min_life_time  = np.minimum(hist_length,min_life_time)
+
+                valid_track_dist[i, j] = np.mean(np.std(i_history[:,:min_life_time] - j_history[:,:min_life_time], axis=0))
+
+        SameTracks = valid_track_dist < HistGate
+
 
         # Sort valid tracks by lifetime
-        sorted_ind      = np.argsort(TracksLifeTime[ValidTrackInd])[::-1]  # Descending order
-        SortedTrackInd  = ValidTrackInd[sorted_ind]
+        sorted_ind          = np.argsort(valid_track_lifetime)[::-1]  # Descending order
+        sorted_track_ind    = valid_track_ind[sorted_ind]
 
         # Update SameTracks matrix with sorted indices
-        SameTracks      = SameTracks[SortedTrackInd, :]
-        SameTracks      = SameTracks[:,ValidTrackInd]
+        SameTracks          = SameTracks[sorted_track_ind, :]
+
 
         # Loop through valid tracks
-        for i in range(ValidTrackLen):
-            SameTrackInd = np.where(SameTracks[i, :])[0]
+        for i in range(valid_track_num):
+            same_track_ind = np.where(SameTracks[i, :])[0]
 
-            for j in range(len(SameTrackInd)):
-                trackList[SameTrackInd[j]]["State"] = par["State_Undefined"]
-                SameTracks[SameTrackInd[j], :] = 0
+            for j in range(len(same_track_ind)):
+                trackList[same_track_ind[j]]["State"] = par["State_Undefined"]
+                SameTracks[same_track_ind[j], :] = 0
 
         return trackList
 
@@ -488,7 +504,7 @@ class TestPDAF(unittest.TestCase):
         d       = DataGenerator()
         s       = DataDisplay()
         
-        par     = d.init_scenario(1)
+        par     = d.init_scenario(4)  # 1,2,3 - ok
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
         ax      = s.init_show(par)

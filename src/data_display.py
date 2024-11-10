@@ -142,7 +142,7 @@ class DataDisplay:
             ypred, Spred, yhist     = trackList[k].get_show_info()
             
             u, s, v                 = np.linalg.svd(Spred)
-            elipse                  = u @ np.diag(np.sqrt(s)) @ circle            
+            elipse                  = u @ np.diag(s) @ circle            
             
             # update drawing
             self.h_pose[k].set_data(ypred[0], ypred[1]) 

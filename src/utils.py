@@ -76,22 +76,22 @@ def config_parameters():
     Par["TrajIndex"]    = [12, 11, 8]  # Max 7 trajectories
     Par["PointNum"]     = 2  # More points than trajectories
     Par["NaNDensity"]   = 0.0  # Density of missing points
-    Par["Y1Bounds"]     = [0, 1]  # Approximate bounds for Y1 measurements
-    Par["Y2Bounds"]     = [0, 1]  # Approximate bounds for Y2 measurements
+    Par["Y1Bounds"]     = [0, 1]  # range/ bounds for Y1 measurements
+    Par["Y2Bounds"]     = [0, 1]  # range / bounds for Y2 measurements
     Par["TrajNum"]      = len(Par["TrajIndex"])  # Number of trajectories
-    Par["Nv"]           = 0.005  # Noise variance
-    Par["dT"]           = 1/30  # Time between measurements (seconds)
+    Par["Nv"]           = 0.005  # Noise variance : relative to 0-1 range
+    Par["dT"]           = 1/20  # Time between measurements (seconds)
     Par["Time"]         = 3  # Simulation stopping time (seconds)
 
     # Kalman filter properties
-    Par["StateVar"]     = (0.5)**2  # State variance
-    Par["ObserVar"]     = (0.1)**2  # Observation variance
+    Par["StateVar"]     = (0.1)**2  # State variance
+    Par["ObserVar"]     = (0.2)**2  # Observation variance
 
     # Track properties
     Par["TrackNum"]     = 1  # Number of trackers
     Par["ProbDim"]      = 2  # Problem dimensionality (x, x-y, or x-y-z)
     Par["ModelDim"]     = 2  # Constant velocity or constant acceleration
-    Par["HistLen"]      = 3  # Number of past states for each tracker
+    Par["HistLen"]      = 7  # Number of past states for each tracker
     Par["HistGateLevel"] = 0.1  # History separation value
     Par["LogLikeAlpha"] = 0.3  # Log likelihood forget factor
     Par["GateLevel"]    = 9  # Gating threshold (98.9%)
@@ -100,20 +100,6 @@ def config_parameters():
     Par["UsePDAF"]      = 0  # Use PDAF mode
     Par["PG"]           = 0.9  # Probability of gating
     Par["PD"]           = 0.8  # Probability of detection
-
-    # Tracker states
-    # Par["State_Undefined"] = 0  # Track is free and undefined
-    # Par["State_FirstInit"] = 1  # Track in first initialization
-    # Par["State_LastInit"]  = 3  # Track in last initialization
-    # Par["State_Track"]     = 10  # Track in tracking mode
-    # Par["State_FirstCoast"] = 20  # Track in first coast state
-    # Par["State_LastCoast"] = 25  # Track in last coast state
-
-    # # Grouping states into action groups
-    # Par['State_List_Init']   = list(range(TrackState.FIRST_INIT, TrackState.LAST_INIT + 1))
-    # Par['State_List_Coast']  = list(range(TrackState.FIRST_COAST, TrackState.LAST_COAST - 1))
-    # Par['State_List_Start']  = [TrackState.TRACKING] + Par['State_List_Init']
-    # Par['State_Valid_Show']  = [TrackState.TRACKING] + list(range(TrackState.FIRST_COAST, TrackState.LAST_COAST + 1))
 
     return Par    
 
