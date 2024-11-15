@@ -80,21 +80,22 @@ def config_parameters():
     Par["Y2Bounds"]     = [0, 1]  # range / bounds for Y2 measurements
     Par["TrajNum"]      = len(Par["TrajIndex"])  # Number of trajectories
     Par["Nv"]           = 0.005  # Noise variance : relative to 0-1 range
-    Par["dT"]           = 1/20  # Time between measurements (seconds)
+    Par["dT"]           = 1/30  # Time between measurements (seconds)
     Par["Time"]         = 3  # Simulation stopping time (seconds)
 
     # Kalman filter properties
-    Par["StateVar"]     = (0.1)**2  # State variance
-    Par["ObserVar"]     = (0.2)**2  # Observation variance
+    Par["StateVar"]     = (0.2)**2  # State variance
+    Par["ObserVar"]     = (0.05)**2  # Observation variance
 
     # Track properties
     Par["TrackNum"]     = 1  # Number of trackers
     Par["ProbDim"]      = 2  # Problem dimensionality (x, x-y, or x-y-z)
     Par["ModelDim"]     = 2  # Constant velocity or constant acceleration
-    Par["HistLen"]      = 7  # Number of past states for each tracker
+    Par["HistLen"]      = 10  # Number of past states for each tracker
     Par["HistGateLevel"] = 0.1  # History separation value
     Par["LogLikeAlpha"] = 0.3  # Log likelihood forget factor
-    Par["GateLevel"]    = 9  # Gating threshold (98.9%)
+    Par["GateLevel"]    = (1.3)**2  # for mahal distance - err*invCov*err 
+    #                               # for probabilitu=ies and PDAF  - Gating threshold (98.9%)
 
     # PDAF parameters
     Par["UsePDAF"]      = 0  # Use PDAF mode

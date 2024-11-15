@@ -109,14 +109,13 @@ class PDAF:
         valid_data_ind  = np.where(ValidDataLabel)[0]
         valid_data_num  = len(valid_data_ind)
        
-
         # Handle case of no valid data
         if valid_data_num < 1:
             logger.debug("No valid data for trackers")
             return trackList
         valid_data      = dataList[:,valid_data_ind]
 
-        # Find trackers in tracking state and undefined tracks
+        # Find trackers in init / tracking / coast state 
         valid_track_states = np.zeros((TrackNum,1),dtype = bool)
         for k in range(TrackNum):
             valid_track_states[k] = trackList[k].check_valid() 
@@ -134,7 +133,7 @@ class PDAF:
         # Gating - the max distance. GateLevel should be compatible with measure distance
         DistLabels = dist_metric < GateLevel
 
-        # Associate data with valid tracks
+        # Associate data with valid tracks. Several tracks can connect to the same data - traj crossings
         for k in range(valid_track_num):
             ValidAssociatedInd                      = np.where(DistLabels[k, :])[0]
             trackList[valid_track_ind[k]].data_ind  = valid_data_ind[ValidAssociatedInd]
@@ -150,16 +149,16 @@ class PDAF:
 
         logger.debug(f"Unassociated tracks number: {UnAssocTrackLen}")
 
-        # Randomly assign UNDEFINED tracks with the rest of the data points
-        nonvalid_track_ind  = np.where(~valid_track_states)[0]
-        nonvalid_track_num  = len(nonvalid_track_ind) 
+        # Randomly assign UNDEFINED tracks with unassociated data points
+        undefined_track_ind  = np.where(~valid_track_states)[0]
+        undefined_track_num  = len(undefined_track_ind) 
 
         # number of different data points and tracks should match
-        new_assigned_num   = np.minimum(nonassociated_data_len,nonvalid_track_num)
+        new_assigned_num   = np.minimum(nonassociated_data_len,undefined_track_num)
 
         # Associate data with valid tracks
         for k in range(new_assigned_num):
-            trackList[nonvalid_track_ind[k]].data_ind   = nonassociated_data_ind[k]
+            trackList[undefined_track_ind[k]].data_ind   = nonassociated_data_ind[k]
 
         logger.debug(f"New associated track number: {new_assigned_num}")
             
@@ -504,7 +503,7 @@ class TestPDAF(unittest.TestCase):
         d       = DataGenerator()
         s       = DataDisplay()
         
-        par     = d.init_scenario(4)  # 1,2,3 - ok
+        par     = d.init_scenario(7)  # 1,2,3,4,5,6 - ok
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
         ax      = s.init_show(par)

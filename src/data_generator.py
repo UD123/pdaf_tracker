@@ -45,19 +45,22 @@ class DataGenerator:
             Par["TrajIndex"]    = [7] 
             Par['PointNum']     = 3  
             Par['Time']         = 5     
-        elif scene_type == 4:  # two intersecting trackers
+        elif scene_type == 4:  # two intersecting tracks
             Par["TrajIndex"]    = [9,10] 
             Par['TrackNum']     = 2     
-        elif scene_type == 5:
-            Par["TrajIndex"]    = [3,4] 
-            Par['PointNum']     = 2                 
-        elif scene_type == 6: # clutter
-            Par["TrajIndex"]    = [5] 
-            Par['PointNum']     = 3                     
-        elif scene_type == 7: # noise
-            Par["TrajIndex"]    = [1] 
-            Par['PointNum']     = 1  
-            Par['Nv']           = 0.05
+        elif scene_type == 5:  # two trackers fighting for a single point
+            Par["TrajIndex"]    = [9] 
+            Par['TrackNum']     = 2                 
+        elif scene_type == 6: # two intersecting trackers and 2 tracks and some clutter
+            Par["TrajIndex"]    = [9,10] 
+            Par['TrackNum']     = 2  
+            Par['PointNum']     = 5                     
+        elif scene_type == 7: # random trajectroies going from up to down in clutter
+            Par["TrajIndex"]    = [14,14] 
+            Par['TrackNum']     = 2
+            Par['PointNum']     = 2  
+            Par['Nv']           = 0.01
+            Par["Time"]         = 6
         elif scene_type == 8: # missing data
             Par["TrajIndex"]    = [1] 
             Par['PointNum']     = 1  
@@ -66,6 +69,10 @@ class DataGenerator:
             Par["TrajIndex"]    = [9] 
             Par['PointNum']     = 2  
             Par['Time']         = 3  
+        elif scene_type == 17: # noise
+            Par["TrajIndex"]    = [1] 
+            Par['PointNum']     = 1  
+            Par['Nv']           = 0.05            
 
              
         else: 
@@ -156,6 +163,15 @@ class DataGenerator:
             x = np.linspace(LeftH, RightH, N).reshape((-1,1))
             y = np.hstack((t / Time, x))
 
+        elif TrajType == 14:  # Straight line from upper random position to lower random position
+            x_up, y_up   = np.random.rand(1), 0.95
+            x_low, y_low = np.random.rand(1), 0.05
+
+            x1 = np.linspace(x_up, x_low, N).reshape((-1,1))
+            y1 = np.linspace(y_up, y_low, N).reshape((-1,1))
+
+            y = np.hstack((x1, y1))            
+
         else:
             raise ValueError("Unknown trajectory type")
         
@@ -194,7 +210,7 @@ class DataGenerator:
         # Ensure enough points for trajectories
         if par['PointNum'] < par['TrajNum']:
             logger.debug("There are more trajectories than points.")
-            par['PointNum'] = par['TrajNum'] + 1
+            par['PointNum'] = par['TrajNum'] 
 
         # Random permutation
         RandPermTraj = np.random.permutation(par['PointNum'])

@@ -153,16 +153,18 @@ class TrackingObject:
         if self.state == TrackState.FIRST_INIT:
             self.kf.init_state(data)
             self.life_time      = 0
-            self.history        = np.zeros((self.kf.F.shape[0], self.history_length))
+            # clean history
+            self.history          = np.nan*np.empty((self.kf.F.shape[0], self.history_length))
+            self.history[:,0:1]   = self.kf.x 
 
             logger.debug(f'Tracker {self.id} in state {self.state} : initialized with a new data')
             
         return True    
     
     def init_velocity(self, ydata):
-        "initializes the velocity of the tracker"
+        "initializes the velocity of the tracker - second step"
 
-        if self.state == TrackState.FIRST_INIT:
+        if self.state == (TrackState.FIRST_INIT + 1):
             y       = np.mean(ydata, axis=1)
             self.kf.init_velocity(y)
 
@@ -220,17 +222,7 @@ class TrackingObject:
         # Close down 
         logger.debug('Finished')
 
-    def tprint(self, txt = '', level = 'I'):
-        txt = '%03d : %s' %(self.id, txt)
-        if level == "I":
-            logger.info(txt)
-        elif level == "W":
-            logger.warning(txt)
-        elif level == "E":
-            logger.error(txt)
-        else:
-            logger.info(txt)
- 
+
 # --------------------------------
 #%% Tests
 class TestTrackingObject(unittest.TestCase):

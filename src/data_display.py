@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 #import mpl_toolkits
 #from mpl_toolkits.mplot3d import Axes3D
 
-from utils import logger, config_parameters
+from utils import logger, config_parameters, TrackState
 
 
 # --------------------------------
@@ -54,7 +54,10 @@ class DataDisplay:
       
     def init_show(self, par = None): 
         # init 2D/3D scene
-        par         = self.params if par is None else par
+        if par is not None:
+            self.params = par
+
+        par         = self.params 
         fig_num     = 1
         track_num   = par["TrackNum"]
         
@@ -73,7 +76,7 @@ class DataDisplay:
         # plot tracker positions
         h_pose      = []
         for k in range(track_num):
-            h,  = ax.plot([0], [0],marker='o',color='C'+str(k))
+            h,  = ax.plot([0], [0],marker='x',color='C'+str(k))
             h_pose.append(h)
 
         # plot tracker names
@@ -88,7 +91,7 @@ class DataDisplay:
             h,  = ax.plot([0, 0], [0, 0], color='r')
             h_circle.append(h)   
 
-        # plot tracker uncertainty circles
+        # plot tracker past trajectory
         h_history      = []
         for k in range(track_num):
             h,  = ax.plot([0, 0], [0, 0], color='g')
@@ -134,23 +137,27 @@ class DataDisplay:
         track_num       = self.params["TrackNum"]  
         ct              = np.linspace(0, 2 * np.pi, 100)
         circle          = np.vstack((np.cos(ct), np.sin(ct)))
-        small_shift     = 5e-2
+        small_shift     = 3e-2
 
         # plot tracker positions
         for k in range(track_num):
+
+            # do not show init stages
+            #if trackList[k].state < TrackState.LAST_INIT:
+            #    continue
             
             ypred, Spred, yhist     = trackList[k].get_show_info()
             
             u, s, v                 = np.linalg.svd(Spred)
-            elipse                  = u @ np.diag(s) @ circle            
+            elipse                  = u @ np.diag(np.sqrt(s)) @ circle            
             
             # update drawing
             self.h_pose[k].set_data(ypred[0], ypred[1]) 
             self.h_text[k].set_x(ypred[0] + small_shift)
             self.h_text[k].set_y(ypred[1]) 
+            self.h_text[k].set_text('%d-%d' %(trackList[k].id,trackList[k].state)) 
             self.h_circle[k].set_data(elipse[0,:] + ypred[0], elipse[1,:] + ypred[1]) 
             self.h_history[k].set_data(yhist[0,:], yhist[1,:])  
-
 
 
     def show_info(self, trackList = None, dataList = None):
@@ -223,17 +230,7 @@ class DataDisplay:
         except:
             print('No window found')
 
-    def tprint(self, txt = '', level = 'I'):
-        txt = 'DSP : '+ txt
-        if level == "I":
-            logger.info(txt)
-        elif level == "W":
-            logger.warning(txt)
-        elif level == "E":
-            logger.error(txt)
-        else:
-            logger.info(txt)
-         
+
 
 # --------------------------------
 #%% Tests
