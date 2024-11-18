@@ -11,9 +11,6 @@ Estimates point position and velocity in 2D and 3D.
 
 Usage:
 
-Environemt : 
-    C:\\Users\\udubin\\Documents\\Envs\\safety
-
 Install : 
     See README.md
 
@@ -47,14 +44,14 @@ class KalmanFilter:
         self.loglike        = 0        
 
         # additional
-        self.observ_index = observ_ind # which indx is an observtion variable in the state
-        self.initP        = initP      # uncertainity at the first time
-        self.dT           = dT         # time difference between samples
+        self.observ_index   = observ_ind # which indx is an observtion variable in the state
+        self.initP          = initP      # uncertainity at the first time
+        self.dT             = dT         # time difference between samples
 
         # information display
-        self.debug_level  = 0
+        self.debug_level    = 0
 
-        self.tprint('Tracker is initialized')
+        logger.debug('Kalman Filter is initialized')
 
     def init_kalman_filter(self, dT, ModelDim, ProbDim, StateVar, ObserVar=0.01):
         """
@@ -82,9 +79,9 @@ class KalmanFilter:
             Ftmp = np.array([[1, dT], [0, 1]])
             Htmp = np.array([[1, 0]])
             Qtmp = np.array([[dT**4/4, dT**3/2], [dT**3/2, dT**2]]) * StateVar
-            Rtmp = ObserVar * np.eye(1)
+            Rtmp = np.eye(1) * ObserVar
             xtmp = np.zeros((2, 1))
-            Ptmp = Qtmp * 10
+            Ptmp = Qtmp * 100
 
         elif ModelDim == 3:
             Ftmp = np.array([[1, dT, dT**2/2], [0, 1, dT], [0, 0, 1]])
@@ -92,7 +89,7 @@ class KalmanFilter:
             Qtmp = np.array([[dT**4/20, dT**3/8, dT**2/6],
                             [dT**3/8, dT**2/3, dT/2],
                             [dT**2/6, dT/2, 1]]) * dT * StateVar
-            Rtmp = ObserVar * np.eye(1)
+            Rtmp = np.eye(1) * ObserVar
             xtmp = np.zeros((3, 1))
             Ptmp = Qtmp * 100
 
@@ -110,6 +107,7 @@ class KalmanFilter:
         else:
             raise ValueError("Unsupported problem dimension.")
 
+        logger.debug(f'Kalamn initialized with state variance {StateVar} and observation variance {ObserVar}')
         return F, H, Q, R, ObservInd, initx, initP    
 
     def init_state(self, data):
@@ -118,7 +116,7 @@ class KalmanFilter:
         data    = data.reshape((-1,1))
         if dim_num != data.shape[0]:
             raise ValueError('input data must be 2 dimensional')
-            #self.tprint('input data must be 2 dimensional','E')
+            #logger.debug('input data must be 2 dimensional','E')
         
         # state position
         self.x[self.observ_index + 0] = data # position in 2D/3D
@@ -171,7 +169,7 @@ class KalmanFilter:
         self.P          = Pnew
 
         # performance indicator
-        self.loglike    = etot.T @ Sinv @ etot
+        self.loglike    = (etot.T @ Sinv @ etot).squeeze()
 
         return True
     
@@ -221,7 +219,7 @@ class KalmanFilter:
 
     def finish(self):
         # Close down 
-        self.tprint('Finished')
+        logger.debug('Finished')
 
 
     def tprint(self, txt = '', level = 'I'):

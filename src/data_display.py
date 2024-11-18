@@ -19,16 +19,16 @@ Install :
 '''
 
 import numpy as np
-import time
+#import time
 
-import numpy as np
+#import numpy as np
 import unittest
 import matplotlib.pyplot as plt
 # disable vefore compile
-import mpl_toolkits
-from mpl_toolkits.mplot3d import Axes3D
+#import mpl_toolkits
+#from mpl_toolkits.mplot3d import Axes3D
 
-from utils import logger, config_parameters
+from utils import logger, config_parameters, TrackState
 
 
 # --------------------------------
@@ -50,18 +50,21 @@ class DataDisplay:
         self.h_circle   = None        
         self.h_history  = None            
 
-        self.tprint(f'Created')
+        logger.debug(f'Created')
       
-    def show_init(self, par = None):
+    def init_show(self, par = None): 
         # init 2D/3D scene
-        par         = self.params if par is None else par
+        if par is not None:
+            self.params = par
+
+        par         = self.params 
         fig_num     = 1
         track_num   = par["TrackNum"]
-        small_shift = 5e-3
+        
 
         # init figure
         fig         = plt.figure(fig_num)
-        #plt.clf() 
+        plt.clf() 
         plt.ion()    
         #fig.tight_layout()  
         #ax = fig.add_subplot(projection='3d')  
@@ -73,22 +76,22 @@ class DataDisplay:
         # plot tracker positions
         h_pose      = []
         for k in range(track_num):
-            h,  = ax.plot([0], [0],marker='o',color='C'+str(k))
+            h,  = ax.plot([0], [0],marker='x',color='C'+str(k))
             h_pose.append(h)
 
         # plot tracker names
         h_text      = []
         for k in range(track_num):
-            h  = ax.text(0+small_shift ,1, str(k), fontsize=8)
+            h  = ax.text(0 , 0, str(k), fontsize=8)
             h_text.append(h)
 
         # plot tracker uncertainty circles
         h_circle      = []
         for k in range(track_num):
-            h,  = ax.plot([0, 0], [0,1], color='r')
+            h,  = ax.plot([0, 0], [0, 0], color='r')
             h_circle.append(h)   
 
-        # plot tracker uncertainty circles
+        # plot tracker past trajectory
         h_history      = []
         for k in range(track_num):
             h,  = ax.plot([0, 0], [0, 0], color='g')
@@ -116,7 +119,7 @@ class DataDisplay:
         self.fig    = fig
         self.plt    = plt
         self.ax     = ax
-        self.tprint('Scene rendering is done')
+        logger.debug('Scene rendering is done')
         return ax 
     
     def draw_data(self, dataList):
@@ -126,28 +129,49 @@ class DataDisplay:
 
         self.h_data.set_data(dataList[0, :], dataList[1, :])
 
-    def draw_track_pose(self, trackList):
-        "assuming that everythong is initialized"
+    def draw_track(self, trackList):
+        "assuming that everythong is initialized - show track info"
         if trackList is None:
             return
 
-        track_num   = self.params["TrackNum"]   
+        track_num       = self.params["TrackNum"]  
+        ct              = np.linspace(0, 2 * np.pi, 100)
+        circle          = np.vstack((np.cos(ct), np.sin(ct)))
+        small_shift     = 3e-2
 
         # plot tracker positions
         for k in range(track_num):
-            self.h_pose[k].set_data(trackList[0, :], trackList[1, :])        
+
+            # do not show init stages
+            #if trackList[k].state < TrackState.LAST_INIT:
+            #    continue
+            
+            ypred, Spred, yhist     = trackList[k].get_show_info()
+            
+            u, s, v                 = np.linalg.svd(Spred)
+            elipse                  = u @ np.diag(np.sqrt(s)) @ circle            
+            
+            # update drawing
+            self.h_pose[k].set_data(ypred[0], ypred[1]) 
+            self.h_text[k].set_x(ypred[0] + small_shift)
+            self.h_text[k].set_y(ypred[1]) 
+            self.h_text[k].set_text('%d-%d' %(trackList[k].id,trackList[k].state)) 
+            self.h_circle[k].set_data(elipse[0,:] + ypred[0], elipse[1,:] + ypred[1]) 
+            self.h_history[k].set_data(yhist[0,:], yhist[1,:])  
+
 
     def show_info(self, trackList = None, dataList = None):
         "displays tracks and data"
 
         self.draw_data(dataList)
-        self.draw_track_pose(trackList)
+        self.draw_track(trackList)
 
         #self.fig.canvas.draw()
         #self.fig.canvas.flush_events() 
 
         self.plt.draw()
         self.plt.pause(0.1)
+
 
     def show_tracks_and_data(self, trackList, dataList, par = None):
         """
@@ -206,17 +230,7 @@ class DataDisplay:
         except:
             print('No window found')
 
-    def tprint(self, txt = '', level = 'I'):
-        txt = 'DSP : '+ txt
-        if level == "I":
-            logger.info(txt)
-        elif level == "W":
-            logger.warning(txt)
-        elif level == "E":
-            logger.error(txt)
-        else:
-            logger.info(txt)
-         
+
 
 # --------------------------------
 #%% Tests
@@ -225,14 +239,14 @@ class TestDataDisplay(unittest.TestCase):
     def test_create(self):
         "check create and data show init"
         d       = DataDisplay()
-        ax      = d.show_init()
+        ax      = d.init_show()
         d.finish()
         self.assertFalse(ax is None) 
 
     def test_show_data(self):
         "check create and data show"
         d       = DataDisplay()
-        ax      = d.show_init()
+        ax      = d.init_show()
         trackP  = None
         for k in range(10):
             dataP   = np.random.rand(2,10)

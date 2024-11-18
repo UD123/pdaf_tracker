@@ -23,11 +23,12 @@ Install :
 
 import numpy as np
 import time
-import matplotlib.pyplot as plt
 import unittest
-from utils import logger, config_parameters
+
 from data_generator import DataGenerator
-from track_object import TrackingObject
+from track_object   import TrackingObject
+from data_display   import DataDisplay
+from utils          import logger, config_parameters
 
 
 # --------------------------------
@@ -38,8 +39,9 @@ class PDAF:
 
         # params
         self.params          = self.init_parameters()
+        self.time_counter    = 0
 
-        self.tprint(f'Created')
+        logger.info(f'Created')
 
     def init_parameters(self):
         """
@@ -51,23 +53,8 @@ class PDAF:
         par                 = config_parameters()
 
         track_num           = par['TrackNum']
-        self.tprint(f'Track number : {track_num}')
+        logger.info(f'Track number : {track_num}')
         return par     
-
-    def create_point_cover_2d(self, par):
-        "creates evently districbuted cover of points"
-        # Distribute trackers evenly over the measurement space
-        dy1        = par["Y1Bounds"][1] - par["Y1Bounds"][0]
-        dy2        = par["Y2Bounds"][1] - par["Y2Bounds"][0]
-        TrackNumY1 = max(1, int(np.sqrt(dy1 / dy2 * par["TrackNum"])))
-        TrackNumY2 = int(np.ceil(par["TrackNum"] / TrackNumY1))
-
-        yy1, yy2 = np.meshgrid(
-            np.linspace(par["Y1Bounds"][0] + dy1 / TrackNumY1 / 2, par["Y1Bounds"][1], TrackNumY1),
-            np.linspace(par["Y2Bounds"][0] + dy2 / TrackNumY2 / 2, par["Y2Bounds"][1], TrackNumY2)
-        )
-        cover_data = np.vstack([yy1, yy2]).T
-        return cover_data                
 
     def init_tracks(self, par = None):
         """
@@ -79,31 +66,16 @@ class PDAF:
         Returns:
             TrackList: A list of track objects.
         """
-        par   = self.params if par is None else par
+        par         = self.params if par is None else par
 
-        track_num    = par["TrackNum"]
+        track_num   = par["TrackNum"]
 
-        # Distribute trackers evenly over the measurement space
-        # dy1 = par["Y1Bounds"][1] - par["Y1Bounds"][0]
-        # dy2 = par["Y2Bounds"][1] - par["Y2Bounds"][0]
-        # TrackNumY1 = max(1, int(np.sqrt(dy1 / dy2 * par["TrackNum"])))
-        # TrackNumY2 = int(np.ceil(par["TrackNum"] / TrackNumY1))
-
-        # yy1, yy2 = np.meshgrid(
-        #     np.linspace(par["Y1Bounds"][0] + dy1 / TrackNumY1 / 2, par["Y1Bounds"][1], TrackNumY1),
-        #     np.linspace(par["Y2Bounds"][0] + dy2 / TrackNumY2 / 2, par["Y2Bounds"][1], TrackNumY2)
-        # )
-        # centerData = np.vstack([yy1, yy2]).T
-
-        centerData = self.create_point_cover_2d(par)
 
         # Initialize the track list
         trackList = []
         for i in range(track_num):
 
             track       = TrackingObject(par, i+1)
-            track.init_state(centerData[:,i].reshape((2,1)))
-
             trackList.append(track)
 
         return trackList
@@ -111,6 +83,8 @@ class PDAF:
     def track_association(self, trackList, dataList, par):
         """
         Associates data points with tracks.
+        Trackers in the tracking state are assigned with data points.
+        Trackers in undefined state assigned with the rest of the points.
 
         Args:
             trackList: Kalman structure list and more
@@ -123,56 +97,76 @@ class PDAF:
 
         GateLevel   = par["GateLevel"]
         TrackNum    = par["TrackNum"]
-        PointNum    = par["PointNum"]
 
-        # Check for undefined tracks
-        for i in range(TrackNum):
-            if not trackList[i].check_valid():
-                raise ValueError(f"Undefined track {trackList[i].id}")
+        # deal with no data provided - empty data list
+        if len(dataList) < 1:
+            logger.debug("No data")
+            # trackers will not have data associated. data_ind will be epmpty
+            return trackList
 
-        # Find valid data points
+        # Find valid data points : nan indicates missing data
         ValidDataLabel  = ~np.any(np.isnan(dataList), axis=0)
-        ValidDataInd    = np.where(ValidDataLabel)[0]
-        ValidDataNum    = len(ValidDataInd)
-
+        valid_data_ind  = np.where(ValidDataLabel)[0]
+        valid_data_num  = len(valid_data_ind)
+       
         # Handle case of no valid data
-        if ValidDataNum == 0:
-            self.tprint("No valid data")
-            ResolvedValidDataNum = 1 # to prevent zero columns DistM matrix
-        else:
-            ResolvedValidDataNum = ValidDataNum
+        if valid_data_num < 1:
+            logger.debug("No valid data for trackers")
+            return trackList
+        valid_data      = dataList[:,valid_data_ind]
 
+        # Find trackers in init / tracking / coast state 
+        valid_track_states = np.zeros((TrackNum,1),dtype = bool)
+        for k in range(TrackNum):
+            valid_track_states[k] = trackList[k].check_valid() 
 
-        # Calculate distance matrix
-        DistM = np.ones((TrackNum, ResolvedValidDataNum)) * 1e6
-        for i in range(TrackNum):
-            dist_track  = trackList[i].association_distance(dataList)
-            DistM[i, :] = dist_track.reshape((1,-1))  # Assuming gaussian_prob is defined
+        valid_track_ind  = np.where(valid_track_states)[0]
+        valid_track_num  = len(valid_track_ind)                   
 
-        # Gating
-        DistLabels = DistM < GateLevel
+        # Calculate distance metric for the valid trackers
+        # Metric could be actual distance or probability / scaled by tracker covariance
+        dist_metric = np.ones((valid_track_num, valid_data_num)) * 1e6
+        for k in range(valid_track_num):
+            dist_track          = trackList[valid_track_ind[k]].association_distance(valid_data)
+            dist_metric[k, :]   = dist_track.reshape((1,-1))  # Assuming gaussian_prob is defined
 
-        # Associate data with tracks
-        for i in range(TrackNum):
-            ValidAssociatedInd      = np.where(DistLabels[i, :])[0]
-            trackList[i].data_ind   = ValidDataInd[ValidAssociatedInd]
+        # Gating - the max distance. GateLevel should be compatible with measure distance
+        DistLabels = dist_metric < GateLevel
+
+        # Associate data with valid tracks. Several tracks can connect to the same data - traj crossings
+        for k in range(valid_track_num):
+            ValidAssociatedInd                      = np.where(DistLabels[k, :])[0]
+            trackList[valid_track_ind[k]].data_ind  = valid_data_ind[ValidAssociatedInd]
 
         # Find unassociated data and tracks
-        UnAssocDataInd = np.where(np.sum(DistLabels, axis=0) == 0)[0]
-        UnAssocDataLen = len(UnAssocDataInd)
+        nonassociated_data_ind = np.where(np.sum(DistLabels, axis=0) == 0)[0]
+        nonassociated_data_len = len(nonassociated_data_ind)
 
-        self.tprint(f"Unassociated points number: {UnAssocDataLen}")
+        logger.debug(f"Unassociated points number: {nonassociated_data_len}") 
 
         UnAssocTrackInd = np.where(np.sum(DistLabels, axis=1) == 0)[0]
         UnAssocTrackLen = len(UnAssocTrackInd)
 
-        self.tprint(f"Unassociated tracks number: {UnAssocTrackLen}")
+        logger.debug(f"Unassociated tracks number: {UnAssocTrackLen}")
+
+        # Randomly assign UNDEFINED tracks with unassociated data points
+        undefined_track_ind  = np.where(~valid_track_states)[0]
+        undefined_track_num  = len(undefined_track_ind) 
+
+        # number of different data points and tracks should match
+        new_assigned_num   = np.minimum(nonassociated_data_len,undefined_track_num)
+
+        # Associate data with valid tracks
+        for k in range(new_assigned_num):
+            trackList[undefined_track_ind[k]].data_ind   = nonassociated_data_ind[k]
+
+        logger.debug(f"New associated track number: {new_assigned_num}")
             
         return trackList        
     
-    def track_update(trackList, dataList, par):
+    def track_update(self, trackList, dataList, par):
         """
-        Performs track update using a Kalman filter (PDAF optional).
+        Performs track update using Kalman filter (PDAF optional).
 
         Args:
             trackList: List of track objects.
@@ -197,6 +191,9 @@ class PDAF:
             # extract associated data
             ydata   = track.extract_data(dataList)
 
+            # Init state of the first time created
+            ret     = track.init_state(ydata)            
+
             # Init velocity if data is OK and extract the relevant part
             ret     = track.init_velocity(ydata)
 
@@ -212,70 +209,87 @@ class PDAF:
             # back - no need
             trackList[i] = track
             
-            
+        
+        self.time_counter    += 1
         # ... (rest of the code)
         return trackList
 
 
     def track_separation(self, trackList, dataList, par):
         """
-        Identifies and discards tracks with similar histories.
+        Identifies and discards tracks with similar histories. 
+        Prevents situation when two tracks follow the same point.
 
         Args:
             trackList: List of track objects.
             dataList: 2D array containing measurement data (time x measurements).
-            Par: Dictionary containing parameters.
+            par: Dictionary containing parameters.
 
         Returns:
             trackList: Updated list of track objects.
         """
 
-        TrackNum = par["TrackNum"]
-        HistGate = par["HistGateLevel"] * (par["Y1Bounds"][1] - par["Y1Bounds"][0]) * (par["Y2Bounds"][1] - par["Y2Bounds"][0])
+        hist_length = par["HistLen"]
+        TrackNum    = par["TrackNum"]
+        # dimension in which tracks could be different
+        HistGate    = par["HistGateLevel"] #* (par["Y1Bounds"][1] - par["Y1Bounds"][0]) * (par["Y2Bounds"][1] - par["Y2Bounds"][0])
 
-        # Calculate pairwise distances between track histories
-        HistDist = np.ones((TrackNum, TrackNum)) * 10000
-        for i in range(TrackNum - 1):
-            for j in range(i + 1, TrackNum):
-                HistDist[i, j] = np.sum(np.std(trackList[i].history - trackList[j].history, axis=1))
+        # Find trackers in tracking state and undefined tracks
+        valid_track_states = np.zeros((TrackNum,1),dtype = bool)
+        for k in range(TrackNum):
+            valid_track_states[k] = trackList[k].check_valid() 
 
-        SameTracks = HistDist < HistGate
-
-        # Identify valid tracks and their lifetimes
-        ValidTrackLabel = np.zeros(TrackNum, dtype=bool)
-        TracksLifeTime  = np.zeros(TrackNum)
-        for i in range(TrackNum):
-            if trackList[i].state != par["State_Undefined"]:
-                ValidTrackLabel[i] = True
-                TracksLifeTime[i]  = trackList[i].life_time
-
-        ValidTrackInd = np.where(ValidTrackLabel)[0]
-        ValidTrackLen = len(ValidTrackInd)
-        if ValidTrackLen == 0:
-            self.tprint("Undefined States - check!!!")
+        valid_track_ind  = np.where(valid_track_states)[0]
+        valid_track_num  = len(valid_track_ind)   
+        if valid_track_num == 0:
+            logger.warning("Undefined States - check!!!")
             return trackList
         else:
-            self.tprint(f"Valid state tracks number: {ValidTrackLen}")
+            logger.info(f"Valid state tracks number: {valid_track_num}")        
+
+        # extract life times - need to compare - older tracks will survive
+        valid_track_lifetime = np.zeros((valid_track_num,1))
+        for i in range(valid_track_num):
+            i_ind                   = valid_track_ind[i]
+            valid_track_lifetime    = trackList[i_ind].life_time
+
+        # Calculate pairwise distances between track histories
+        valid_track_dist            = np.ones((valid_track_num, valid_track_num)) * 1e6
+        for i in range(valid_track_num - 1):
+            i_ind          = valid_track_ind[i]
+            i_history      = trackList[i_ind].history
+            for j in range(i + 1, valid_track_num):
+                j_ind          = valid_track_ind[j]
+                j_history      = trackList[j_ind].history
+
+                # history contains nan - compare only numeric values in history vectors
+                min_life_time  = np.minimum(trackList[i_ind].life_time,trackList[j_ind].life_time)
+                min_life_time  = np.minimum(hist_length,min_life_time)
+
+                valid_track_dist[i, j] = np.mean(np.std(i_history[:,:min_life_time] - j_history[:,:min_life_time], axis=0))
+
+        SameTracks = valid_track_dist < HistGate
+
 
         # Sort valid tracks by lifetime
-        sorted_ind      = np.argsort(TracksLifeTime[ValidTrackInd])[::-1]  # Descending order
-        SortedTrackInd  = ValidTrackInd[sorted_ind]
+        sorted_ind          = np.argsort(valid_track_lifetime)[::-1]  # Descending order
+        sorted_track_ind    = valid_track_ind[sorted_ind]
 
         # Update SameTracks matrix with sorted indices
-        SameTracks      = SameTracks[SortedTrackInd, :]
-        SameTracks      = SameTracks[:,ValidTrackInd]
+        SameTracks          = SameTracks[sorted_track_ind, :]
+
 
         # Loop through valid tracks
-        for i in range(ValidTrackLen):
-            SameTrackInd = np.where(SameTracks[i, :])[0]
+        for i in range(valid_track_num):
+            same_track_ind = np.where(SameTracks[i, :])[0]
 
-            for j in range(len(SameTrackInd)):
-                trackList[SameTrackInd[j]]["State"] = par["State_Undefined"]
-                SameTracks[SameTrackInd[j], :] = 0
+            for j in range(len(same_track_ind)):
+                trackList[same_track_ind[j]]["State"] = par["State_Undefined"]
+                SameTracks[same_track_ind[j], :] = 0
 
         return trackList
 
-    def track_start(self, trackList, dataList, Par):
+    def track_start(self, trackList, dataList, par):
         """
         Initializes new tracks based on unassociated data.
 
@@ -314,19 +328,18 @@ class PDAF:
 
         UnAssocDataInd = np.where(UnAssociatedData)[0]
         UnAssocDataLen = len(UnAssocDataInd)
-        if par["ShowOn"]:
-            self.tprint(f"Unassociated points number: {UnAssocDataLen}")
+
+        logger.debug(f"Unassociated points number: {UnAssocDataLen}")
 
         UnDefinedTrackInd = np.where(UnDefinedTrackLabel)[0]
         UnDefinedTrackLen = len(UnDefinedTrackInd)
-        if par["ShowOn"]:
-            self.tprint(f"Undefined state tracks number: {UnDefinedTrackLen}")
+
+        logger.debug(f"Undefined state tracks number: {UnDefinedTrackLen}")
 
         # Initialize new tracks
         if UnDefinedTrackLen == 0:
-            if par["ShowOn"]:
-                self.tprint("No undefined tracks")
-                return trackList
+            logger.debug("No undefined tracks")
+            return trackList
 
         if UnAssocDataLen < UnDefinedTrackLen:
             # More tracks than unassociated data
@@ -339,8 +352,8 @@ class PDAF:
         else:
             DataLoc = dataList[:, UnAssocDataInd[:UnDefinedTrackLen]]
 
-        if par["ShowOn"]:
-            self.tprint(f"{UnDefinedTrackLen} tracks are initiated and {UnAssocDataLen} from random location")
+
+        logger.info(f"{UnDefinedTrackLen} tracks are initiated and {UnAssocDataLen} from random location")
 
         # Initialize new tracks
 
@@ -357,112 +370,28 @@ class PDAF:
             trackList[UnDefinedTrackInd[i]]["Hist"]     = np.zeros_like(trackList[UnDefinedTrackInd[i]]["Hist"])
 
         return trackList
-    
-    def  show_init(self, ax = None, fig = None):
-        # init 3D scene
-        if ax is None or fig is None:
-            fig = plt.figure(1)
-            plt.clf() 
-            plt.ion() 
-            #fig.canvas.set_window_title('3D Scene')
-            ax = fig.add_subplot(projection='3d')
-            fig.tight_layout()
-            
-            #ax.set_proj_type('ortho')
-            
-            #self.ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-            #self.ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-            #self.ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
+   
+    def track_print(self, trackList, par):
+        "print tracking debug info nicely into columns"
 
-        #ax.set_aspect("equal")
-        plt.title('Data Points & Tracks')
-        plt.xlabel('X1')
-        plt.ylabel('X2')
-        ax = plt.gca()
-        ax.set_xlim([self.params["Y1Bounds"][0], self.params["Y1Bounds"][1]])
-        ax.set_ylim([self.params["Y2Bounds"][0], self.params["Y2Bounds"][1]])
+        TrackNum             = par["TrackNum"]
 
-        #ax.set_xlabel('x')
-        #ax.set_ylabel('y')
-        #ax.set_zlabel('z')
-        
-        #ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-        #ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-        #ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 0.0))
-        
-        
-        #ax.set_title('Object Visualization')
-        plt.show()
-        self.Print('Scene rendering is done')
-        
-        self.fig    = fig
-        self.ax     = ax
-        return ax 
+        print_line           = '%4s |' %(str(self.time_counter))
+        for k in range(TrackNum):
+            print_line = print_line + ' %2s-%s |' %(str(trackList[k].state),str(trackList[k].life_time))  
 
-    def show_tracks_and_data(self, trackList, dataList, par):
-        """
-        Visualizes the data points and tracks.
+        logger.info(print_line)
 
-        Args:
-            trackList: List of track objects.
-            dataList: 2D array containing measurement data (time x measurements).
-            Par: Dictionary containing parameters.
-        """
+        return trackList
 
-        ShowFigNum  = 1
-        #AxisSc      = [par["Y1Bounds"][0], par["Y2Bounds"][0], par["Y1Bounds"][1], par["Y2Bounds"][1]]
-        SmallShift  = 5e-3
-        NumSigma    = np.sqrt(par["GateLevel"])
-
-        # Plot data points
-        plt.figure(ShowFigNum)
-        plt.plot(dataList[0, :], dataList[1, :], 'b.')
-        #plt.axis(AxisSc)
-        plt.title('Data Points & Tracks')
-        plt.xlabel('X1')
-        plt.ylabel('X2')
-        ax = plt.gca()
-        ax.set_xlim([par["Y1Bounds"][0], par["Y1Bounds"][1]])
-        ax.set_ylim([par["Y2Bounds"][0], par["Y2Bounds"][1]])
-        
-        # Plot tracks
-        TrackNum            = len(trackList)
-
-        for i in range(TrackNum):
-
-            y, S    = trackList[i].predict()
-            u, s, v = np.linalg.svd(S)
-            elipse  = u @ np.diag(np.sqrt(s)) @ np.vstack((np.cos(np.linspace(0, 2 * np.pi, 100)), np.sin(np.linspace(0, 2 * np.pi, 100))))
-
-            # do not show certain states
-            #if not any(trackList[i]["State"] == s for s in ValidStatesForShow):
-            #    y = np.array([[np.nan], [np.nan]])
-
-            plt.plot(elipse[0, :] + y[0], elipse[1, :] + y[1], 'r')
-            plt.text(y[0] + SmallShift, y[1], str(i), fontsize=8)
-
-        plt.draw()
-        plt.pause(0.1)  # Update the plot
-        #plt.clf()       
  
     def finish(self):
         # Close everything
         try:
-            #cv.destroyWindow(self.estimator_name) 
             pass
         except:
             print('No window found')
 
-    def tprint(self, txt = '', level = 'I'):
-        txt = 'PDF : '+ txt
-        if level == "I":
-            logger.info(txt)
-        elif level == "W":
-            logger.warning(txt)
-        elif level == "E":
-            logger.error(txt)
-        else:
-            logger.info(txt)
 
     def tracking_demo(self):
         """
@@ -484,7 +413,7 @@ class PDAF:
             dataList = allData[:, :, k]
 
             # Show the current state (optional)
-            self.show_tracks_and_data(trackList, dataList, par)  # Assuming this function is defined
+            #self.show_tracks_and_data(trackList, dataList, par)  # Assuming this function is defined
 
             # Data-track association
             trackList = self.track_association(trackList, dataList, par)  # Assuming this function is defined
@@ -498,11 +427,14 @@ class PDAF:
             # Start new tracks
             trackList = self.track_start(trackList, dataList, par)  # Assuming this function is defined
 
+            # print tracks info
+            trackList = self.track_print(trackList, par)
+
             # Record data (optional)
             # Record = Structure_PDAF_Record(Record, TrackList, DataList)  # Assuming this function is defined
 
         # Show final results
-        self.show_tracks_and_data(trackList, dataList, par)  # Assuming this function is defined            
+        #self.show_tracks_and_data(trackList, dataList, par)  # Assuming this function is defined            
 
 # --------------------------------
 #%% Tests
@@ -511,9 +443,12 @@ class TestPDAF(unittest.TestCase):
     def test_create(self):
         "check create and data generation"
         p       = PDAF()
-        par     = p.init_parameters()
         d       = DataGenerator()
-        ydata,t = d.init_data(par)      
+        s       = DataDisplay()
+        
+        par     = p.init_parameters()
+        ydata,t = d.init_data(par)   
+        ax      = s.init_show()
 
         p.finish()
         self.assertTrue(len(ydata) > 0) 
@@ -521,16 +456,19 @@ class TestPDAF(unittest.TestCase):
     def test_show_data(self):
         "check create and data generation"
         p       = PDAF()
-        par     = p.init_parameters()
         d       = DataGenerator()
+        s       = DataDisplay()
+        
+        par     = p.init_parameters()
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
+        ax      = s.init_show(par)
 
         # PDAF filtering loop
         for k in range(ydata.shape[1]):
-            # Get the data for time k
-            dataList = ydata[:, k, :].squeeze()
-            p.show_tracks_and_data(tlist, dataList, par)
+            # Get the data for time 2 x k x point_num
+            dlist    = ydata[:, k, :].squeeze()
+            s.show_info(tlist, dlist)
             time.sleep(0.1)
 
         p.finish()
@@ -540,21 +478,49 @@ class TestPDAF(unittest.TestCase):
         "check tracker and data association"
         p       = PDAF()
         d       = DataGenerator()
-        par     = d.init_scenario(9)
+        s       = DataDisplay()
+        
+        par     = d.init_scenario(1)
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
+        ax      = s.init_show(par)
 
         # PDAF filtering loop
         for k in range(ydata.shape[1]):
-            # Get the data for time k
-            dlist = ydata[:, k, :].reshape((2,-1))
-            tlist = p.track_association(tlist, dlist, par)
-            #tlist = p.track_start(tlist, dlist, par)
-            p.show_tracks_and_data(tlist, dlist, par)
+            # Get the data for time 2 x k x point_num
+            dlist       = ydata[:, k, :].reshape((2,-1))
+            tlist       = p.track_association(tlist, dlist, par)
+            tlist       = p.track_print(tlist, par)
+            s.show_info(tlist, dlist)
             time.sleep(0.1)
 
         p.finish()
-        self.assertTrue(len(ydata) > 0)         
+        self.assertTrue(len(ydata) > 0)    
+        
+    def test_update(self):
+        "check tracker update and data association"
+        p       = PDAF()
+        d       = DataGenerator()
+        s       = DataDisplay()
+        
+        par     = d.init_scenario(7)  # 1,2,3,4,5,6 - ok
+        ydata,t = d.init_data(par)    
+        tlist   = p.init_tracks(par)
+        ax      = s.init_show(par)
+
+        # PDAF filtering loop
+        for k in range(ydata.shape[1]):
+            # Get the data for time 2 x k x point_num
+            dlist       = ydata[:, k, :].reshape((2,-1))
+            tlist       = p.track_association(tlist, dlist, par)
+            tlist       = p.track_update(tlist, dlist, par)
+            tlist       = p.track_print(tlist, par)
+            
+            s.show_info(tlist, dlist)
+            time.sleep(0.1)
+
+        p.finish()
+        self.assertTrue(len(ydata) > 0)          
 
 # --------------------------------
 #%% Run Test
@@ -563,7 +529,8 @@ def RunTest():
     suite = unittest.TestSuite()
     #suite.addTest(TestPDAF("test_create")) # ok
     #suite.addTest(TestPDAF("test_show_data")) # ok
-    suite.addTest(TestPDAF("test_association")) 
+    #suite.addTest(TestPDAF("test_association")) 
+    suite.addTest(TestPDAF("test_update")) 
 
     
     
