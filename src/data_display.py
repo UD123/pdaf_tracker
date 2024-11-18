@@ -41,6 +41,7 @@ class DataDisplay:
 
         # show
         self.fig        = None
+        self.plt        = None
         self.ax         = None    
 
         self.h_data     = None        
@@ -60,9 +61,9 @@ class DataDisplay:
 
         # init figure
         fig         = plt.figure(fig_num)
-        plt.clf() 
-        #plt.ion()    
-        fig.tight_layout()  
+        #plt.clf() 
+        plt.ion()    
+        #fig.tight_layout()  
         #ax = fig.add_subplot(projection='3d')  
 
         # Plot data points for handler
@@ -78,7 +79,7 @@ class DataDisplay:
         # plot tracker names
         h_text      = []
         for k in range(track_num):
-            h  = ax.text([0+small_shift] , [1], str(k), fontsize=8)
+            h  = ax.text(0+small_shift ,1, str(k), fontsize=8)
             h_text.append(h)
 
         # plot tracker uncertainty circles
@@ -113,6 +114,7 @@ class DataDisplay:
 
 
         self.fig    = fig
+        self.plt    = plt
         self.ax     = ax
         self.tprint('Scene rendering is done')
         return ax 
@@ -141,8 +143,11 @@ class DataDisplay:
         self.draw_data(dataList)
         self.draw_track_pose(trackList)
 
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events() 
+        #self.fig.canvas.draw()
+        #self.fig.canvas.flush_events() 
+
+        self.plt.draw()
+        self.plt.pause(0.1)
 
     def show_tracks_and_data(self, trackList, dataList, par = None):
         """
@@ -229,8 +234,9 @@ class TestDataDisplay(unittest.TestCase):
         d       = DataDisplay()
         ax      = d.show_init()
         trackP  = None
-        dataP   = np.random.rand(2,10)
-        d.show_info(trackP, dataP)
+        for k in range(10):
+            dataP   = np.random.rand(2,10)
+            d.show_info(trackP, dataP)
         d.finish()
         self.assertFalse(ax is None) 
 
