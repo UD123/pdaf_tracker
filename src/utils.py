@@ -84,8 +84,8 @@ def config_parameters():
     Par["Time"]         = 3  # Simulation stopping time (seconds)
 
     # Kalman filter properties
-    Par["StateVar"]     = (0.2)**2  # State variance
-    Par["ObserVar"]     = (0.05)**2  # Observation variance
+    Par["StateVar"]     = (0.5)**2  # State variance
+    Par["ObserVar"]     = (0.03)**2  # Observation variance
 
     # Track properties
     Par["TrackNum"]     = 1  # Number of trackers
@@ -94,7 +94,7 @@ def config_parameters():
     Par["HistLen"]      = 10  # Number of past states for each tracker
     Par["HistGateLevel"] = 0.1  # History separation value
     Par["LogLikeAlpha"] = 0.3  # Log likelihood forget factor
-    Par["GateLevel"]    = (1.3)**2  # for mahal distance - err*invCov*err 
+    Par["GateLevel"]    = (2.3)**2  # for mahal distance - err*invCov*err 
     #                               # for probabilitu=ies and PDAF  - Gating threshold (98.9%)
 
     # PDAF parameters
