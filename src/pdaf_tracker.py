@@ -265,29 +265,28 @@ class PDAF:
                 j_history      = trackList[j_ind].history
 
                 # history contains nan - compare only numeric values in history vectors
-                min_life_time  = np.minimum(trackList[i_ind].life_time,trackList[j_ind].life_time)
-                min_life_time  = np.minimum(hist_length,min_life_time)
+                min_life_time           = np.minimum(trackList[i_ind].life_time,trackList[j_ind].life_time)
+                min_life_time           = np.minimum(hist_length,min_life_time)
+                valid_track_dist[i, j]  = np.mean(np.std(i_history[:,:min_life_time] - j_history[:,:min_life_time], axis=0))
 
-                valid_track_dist[i, j] = np.mean(np.std(i_history[:,:min_life_time] - j_history[:,:min_life_time], axis=0))
-
-        SameTracks          = valid_track_dist < HistGate
+        same_track_mtrx     = valid_track_dist < HistGate
 
 
         # Sort valid tracks by lifetime
         sorted_ind          = np.argsort(valid_track_lifetime)[::-1]  # Descending order
+        
+        # Update same_track_mtrx matrix with sorted indices
+        same_track_mtrx     = same_track_mtrx[sorted_ind, :]
         sorted_track_ind    = valid_track_ind[sorted_ind]
-
-        # Update SameTracks matrix with sorted indices
-        SameTracks          = SameTracks[sorted_track_ind, :]
 
         # Loop through valid tracks
         for i in range(valid_track_num):
-            same_track_ind = np.where(SameTracks[i, :])[0]
+            same_track_ind      = np.where(same_track_mtrx[i, :])[0]
 
             for j in range(len(same_track_ind)):
                 kill_ind      = same_track_ind[j]
                 trackList[valid_track_ind[kill_ind]].reset_state()
-                SameTracks[kill_ind, :] = 0
+                same_track_mtrx[kill_ind, :] = 0
                 logger.debug('Tracker %d is separated.' %(valid_track_ind[kill_ind]))
 
         return trackList
@@ -531,7 +530,7 @@ class TestPDAF(unittest.TestCase):
         d       = DataGenerator()
         s       = DataDisplay()
         
-        par     = d.init_scenario(8)  # 1,2,3,4,5,6,7 - ok
+        par     = d.init_scenario(6)  # 1,2,3,4,5,6,7 - ok
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
         ax      = s.init_show(par)

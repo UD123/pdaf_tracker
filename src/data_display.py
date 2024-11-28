@@ -120,6 +120,10 @@ class DataDisplay:
         self.plt    = plt
         self.ax     = ax
         logger.debug('Scene rendering is done')
+
+        # for debug
+        logger.info('Press any button to continue...')
+        self.plt.waitforbuttonpress()        
         return ax 
     
     def draw_data(self, dataList):
