@@ -235,11 +235,14 @@ class PDAF:
         TrackNum    = par["TrackNum"]
         # dimension in which tracks could be different
         HistGate    = par["HistGateLevel"] #* (par["Y1Bounds"][1] - par["Y1Bounds"][0]) * (par["Y2Bounds"][1] - par["Y2Bounds"][0])
+        hist_length_min = int(hist_length/4)
 
         # Find trackers in tracking state and undefined tracks
+        # Make sure the histories are long enough
         valid_track_states  = np.zeros((TrackNum,1),dtype = bool)
         for k in range(TrackNum):
-            valid_track_states[k] = trackList[k].check_valid() 
+            if hist_length_min < trackList[k].life_time:
+                valid_track_states[k] = trackList[k].check_valid() 
 
         valid_track_ind     = np.where(valid_track_states)[0]
         valid_track_num     = len(valid_track_ind)   
@@ -247,7 +250,7 @@ class PDAF:
             logger.warning("All trackers in the Undefined States - check!!!")
             return trackList
         else:
-            logger.info(f"Valid state tracks number: {valid_track_num}")        
+            logger.debug(f"Valid state tracks number: {valid_track_num}")        
 
         # extract life times - need to compare - older tracks will survive
         valid_track_lifetime = np.zeros((valid_track_num,1))
@@ -273,7 +276,7 @@ class PDAF:
 
 
         # Sort valid tracks by lifetime
-        sorted_ind          = np.argsort(valid_track_lifetime)[::-1]  # Descending order
+        sorted_ind          = np.argsort(valid_track_lifetime, None)[::-1]  # Descending order, None makes it flat
         
         # Update same_track_mtrx matrix with sorted indices
         same_track_mtrx     = same_track_mtrx[sorted_ind, :]
@@ -287,7 +290,8 @@ class PDAF:
                 kill_ind      = same_track_ind[j]
                 trackList[valid_track_ind[kill_ind]].reset_state()
                 same_track_mtrx[kill_ind, :] = 0
-                logger.debug('Tracker %d is separated.' %(valid_track_ind[kill_ind]))
+                tid           = trackList[valid_track_ind[kill_ind]].id
+                logger.debug('Tracker %d is separated.' %(tid))
 
         return trackList
 
@@ -530,7 +534,7 @@ class TestPDAF(unittest.TestCase):
         d       = DataGenerator()
         s       = DataDisplay()
         
-        par     = d.init_scenario(6)  # 1,2,3,4,5,6,7 - ok
+        par     = d.init_scenario(8)  # 1,2,3,4,5,6,7 - ok
         ydata,t = d.init_data(par)    
         tlist   = p.init_tracks(par)
         ax      = s.init_show(par)

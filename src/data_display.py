@@ -147,8 +147,8 @@ class DataDisplay:
         for k in range(track_num):
 
             # do not show init stages
-            #if trackList[k].state < TrackState.LAST_INIT:
-            #    continue
+            if trackList[k].state < TrackState.LAST_INIT:
+               continue
             
             ypred, Spred, yhist     = trackList[k].get_show_info()
             
@@ -159,7 +159,8 @@ class DataDisplay:
             self.h_pose[k].set_data(ypred[0], ypred[1]) 
             self.h_text[k].set_x(ypred[0] + small_shift)
             self.h_text[k].set_y(ypred[1]) 
-            self.h_text[k].set_text('%d-%d' %(trackList[k].id,trackList[k].state)) 
+            #self.h_text[k].set_text('%d-%d' %(trackList[k].id,trackList[k].state)) 
+            self.h_text[k].set_text('%d-%d' %(trackList[k].id,trackList[k].life_time)) 
             self.h_circle[k].set_data(elipse[0,:] + ypred[0], elipse[1,:] + ypred[1]) 
             self.h_history[k].set_data(yhist[0,:], yhist[1,:])  
 

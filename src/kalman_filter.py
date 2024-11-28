@@ -81,7 +81,7 @@ class KalmanFilter:
             Qtmp = np.array([[dT**4/4, dT**3/2], [dT**3/2, dT**2]]) * StateVar
             Rtmp = np.eye(1) * ObserVar
             xtmp = np.zeros((2, 1))
-            Ptmp = Qtmp * 10
+            Ptmp = Qtmp * 100
 
         elif ModelDim == 3:
             Ftmp = np.array([[1, dT, dT**2/2], [0, 1, dT], [0, 0, 1]])
@@ -107,7 +107,7 @@ class KalmanFilter:
         else:
             raise ValueError("Unsupported problem dimension.")
 
-        logger.debug(f'Kalamn initialized with state variance {StateVar} and observation variance {ObserVar}')
+        logger.debug(f'Kalamn initialized with state variance {StateVar:.4f} and observation variance {ObserVar:.4f}')
         return F, H, Q, R, ObservInd, initx, initP    
 
     def init_state(self, data):
@@ -130,6 +130,7 @@ class KalmanFilter:
         xpred = self.F @ self.x
         ypred = self.H @ xpred
         veloc   = (y.reshape((-1,1)) - ypred) / self.dT
+        veloc   = np.clip(veloc, -0.1/self.dT, 0.1/self.dT)
         self.x[self.observ_index + 1] = veloc
 
     def predict(self):
