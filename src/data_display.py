@@ -172,6 +172,10 @@ class DataDisplay:
         self.plt.draw()
         self.plt.pause(0.1)
 
+        # for debug
+        #logger.info('Press any button to continue...')
+        #self.plt.waitforbuttonpress()
+
 
     def show_tracks_and_data(self, trackList, dataList, par = None):
         """

@@ -105,8 +105,8 @@ class PDAF:
             return trackList
 
         # Find valid data points : nan indicates missing data
-        ValidDataLabel  = ~np.any(np.isnan(dataList), axis=0)
-        valid_data_ind  = np.where(ValidDataLabel)[0]
+        valid_data_lbl  = ~np.any(np.isnan(dataList), axis=0)
+        valid_data_ind  = np.where(valid_data_lbl)[0]
         valid_data_num  = len(valid_data_ind)
        
         # Handle case of no valid data
@@ -125,18 +125,20 @@ class PDAF:
 
         # Calculate distance metric for the valid trackers
         # Metric could be actual distance or probability / scaled by tracker covariance
+        
         dist_metric = np.ones((valid_track_num, valid_data_num)) * 1e6
         for k in range(valid_track_num):
             dist_track          = trackList[valid_track_ind[k]].association_distance(valid_data)
             dist_metric[k, :]   = dist_track.reshape((1,-1))  # Assuming gaussian_prob is defined
 
         # Gating - the max distance. GateLevel should be compatible with measure distance
+        # Several trackers can connect to the same data point
         DistLabels = dist_metric < GateLevel
 
         # Associate data with valid tracks. Several tracks can connect to the same data - traj crossings
         for k in range(valid_track_num):
-            ValidAssociatedInd                      = np.where(DistLabels[k, :])[0]
-            trackList[valid_track_ind[k]].data_ind  = valid_data_ind[ValidAssociatedInd]
+            valid_associate_ind                     = np.where(DistLabels[k, :])[0]
+            trackList[valid_track_ind[k]].data_ind  = valid_data_ind[valid_associate_ind]
 
         # Find unassociated data and tracks
         nonassociated_data_ind = np.where(np.sum(DistLabels, axis=0) == 0)[0]
@@ -219,7 +221,7 @@ class PDAF:
         """
         Identifies and discards tracks with similar histories. 
         Prevents situation when two tracks follow the same point.
-
+        The oldest track wins.
         Args:
             trackList: List of track objects.
             dataList: 2D array containing measurement data (time x measurements).
@@ -235,14 +237,14 @@ class PDAF:
         HistGate    = par["HistGateLevel"] #* (par["Y1Bounds"][1] - par["Y1Bounds"][0]) * (par["Y2Bounds"][1] - par["Y2Bounds"][0])
 
         # Find trackers in tracking state and undefined tracks
-        valid_track_states = np.zeros((TrackNum,1),dtype = bool)
+        valid_track_states  = np.zeros((TrackNum,1),dtype = bool)
         for k in range(TrackNum):
             valid_track_states[k] = trackList[k].check_valid() 
 
-        valid_track_ind  = np.where(valid_track_states)[0]
-        valid_track_num  = len(valid_track_ind)   
+        valid_track_ind     = np.where(valid_track_states)[0]
+        valid_track_num     = len(valid_track_ind)   
         if valid_track_num == 0:
-            logger.warning("Undefined States - check!!!")
+            logger.warning("All trackers in the Undefined States - check!!!")
             return trackList
         else:
             logger.info(f"Valid state tracks number: {valid_track_num}")        
@@ -250,8 +252,8 @@ class PDAF:
         # extract life times - need to compare - older tracks will survive
         valid_track_lifetime = np.zeros((valid_track_num,1))
         for i in range(valid_track_num):
-            i_ind                   = valid_track_ind[i]
-            valid_track_lifetime    = trackList[i_ind].life_time
+            i_ind                       = valid_track_ind[i]
+            valid_track_lifetime[i]     = trackList[i_ind].life_time
 
         # Calculate pairwise distances between track histories
         valid_track_dist            = np.ones((valid_track_num, valid_track_num)) * 1e6
@@ -268,7 +270,7 @@ class PDAF:
 
                 valid_track_dist[i, j] = np.mean(np.std(i_history[:,:min_life_time] - j_history[:,:min_life_time], axis=0))
 
-        SameTracks = valid_track_dist < HistGate
+        SameTracks          = valid_track_dist < HistGate
 
 
         # Sort valid tracks by lifetime
@@ -278,14 +280,15 @@ class PDAF:
         # Update SameTracks matrix with sorted indices
         SameTracks          = SameTracks[sorted_track_ind, :]
 
-
         # Loop through valid tracks
         for i in range(valid_track_num):
             same_track_ind = np.where(SameTracks[i, :])[0]
 
             for j in range(len(same_track_ind)):
-                trackList[same_track_ind[j]]["State"] = par["State_Undefined"]
-                SameTracks[same_track_ind[j], :] = 0
+                kill_ind      = same_track_ind[j]
+                trackList[valid_track_ind[kill_ind]].reset_state()
+                SameTracks[kill_ind, :] = 0
+                logger.debug('Tracker %d is separated.' %(valid_track_ind[kill_ind]))
 
         return trackList
 
@@ -520,7 +523,34 @@ class TestPDAF(unittest.TestCase):
             time.sleep(0.1)
 
         p.finish()
-        self.assertTrue(len(ydata) > 0)          
+        self.assertTrue(len(ydata) > 0)     
+
+    def test_separation(self):
+        "check tracker update, association and separation"
+        p       = PDAF()
+        d       = DataGenerator()
+        s       = DataDisplay()
+        
+        par     = d.init_scenario(8)  # 1,2,3,4,5,6,7 - ok
+        ydata,t = d.init_data(par)    
+        tlist   = p.init_tracks(par)
+        ax      = s.init_show(par)
+
+        # PDAF filtering loop
+        for k in range(ydata.shape[1]):
+            # Get the data for time 2 x k x point_num
+            dlist       = ydata[:, k, :].reshape((2,-1))
+
+            tlist       = p.track_association(tlist, dlist, par)
+            tlist       = p.track_update(tlist, dlist, par)
+            tlist       = p.track_separation(tlist, dlist, par)
+            tlist       = p.track_print(tlist, par)
+            
+            s.show_info(tlist, dlist)
+            time.sleep(0.1)
+
+        p.finish()
+        self.assertTrue(len(ydata) > 0)                
 
 # --------------------------------
 #%% Run Test
@@ -530,10 +560,9 @@ def RunTest():
     #suite.addTest(TestPDAF("test_create")) # ok
     #suite.addTest(TestPDAF("test_show_data")) # ok
     #suite.addTest(TestPDAF("test_association")) 
-    suite.addTest(TestPDAF("test_update")) 
+    #suite.addTest(TestPDAF("test_update")) # ok
+    suite.addTest(TestPDAF("test_separation")) # 
 
-    
-    
     runner = unittest.TextTestRunner()
     runner.run(suite)
 

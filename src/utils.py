@@ -79,8 +79,8 @@ def config_parameters():
     Par["Y1Bounds"]     = [0, 1]  # range/ bounds for Y1 measurements
     Par["Y2Bounds"]     = [0, 1]  # range / bounds for Y2 measurements
     Par["TrajNum"]      = len(Par["TrajIndex"])  # Number of trajectories
-    Par["Nv"]           = 0.005  # Noise variance : relative to 0-1 range
-    Par["dT"]           = 1/30  # Time between measurements (seconds)
+    Par["Nv"]           = 0.003  # Noise variance : relative to 0-1 range
+    Par["dT"]           = 1/20  # Time between measurements (seconds)
     Par["Time"]         = 3  # Simulation stopping time (seconds)
 
     # Kalman filter properties
@@ -91,7 +91,7 @@ def config_parameters():
     Par["TrackNum"]     = 1  # Number of trackers
     Par["ProbDim"]      = 2  # Problem dimensionality (x, x-y, or x-y-z)
     Par["ModelDim"]     = 2  # Constant velocity or constant acceleration
-    Par["HistLen"]      = 10  # Number of past states for each tracker
+    Par["HistLen"]      = 30  # Number of past states for each tracker
     Par["HistGateLevel"] = 0.1  # History separation value
     Par["LogLikeAlpha"] = 0.3  # Log likelihood forget factor
     Par["GateLevel"]    = (2.3)**2  # for mahal distance - err*invCov*err 
