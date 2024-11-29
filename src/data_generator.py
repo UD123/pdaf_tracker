@@ -54,18 +54,25 @@ class DataGenerator:
         elif scene_type == 6: # two intersecting trackers and 2 tracks and some clutter
             Par["TrajIndex"]    = [9,10] 
             Par['TrackNum']     = 2  
-            Par['PointNum']     = 5                     
+            Par['PointNum']     = 20  
+            Par["Time"]         = 6                   
         elif scene_type == 7: # random trajectroies going from up to down in clutter
             Par["TrajIndex"]    = [14,14] 
             Par['TrackNum']     = 2
-            Par['PointNum']     = 2  
-            Par['Nv']           = 0.01
+            Par['PointNum']     = 4  
+            Par['Nv']           = 0.005
             Par["Time"]         = 6
-        elif scene_type == 8: # missing data
+        elif scene_type == 8: # random trajectroies going from up to down in clutter
+            Par["TrajIndex"]    = [14] * 4
+            Par['TrackNum']     = 4
+            Par['PointNum']     = 4  
+            Par['Nv']           = 0.005
+            Par["Time"]         = 6            
+        elif scene_type == 11: # missing data
             Par["TrajIndex"]    = [1] 
             Par['PointNum']     = 1  
             Par['NaNDensity']   = 0.1  
-        elif scene_type == 9: # straight line
+        elif scene_type == 12: # straight line
             Par["TrajIndex"]    = [9] 
             Par['PointNum']     = 2  
             Par['Time']         = 3  

@@ -107,7 +107,7 @@ class KalmanFilter:
         else:
             raise ValueError("Unsupported problem dimension.")
 
-        logger.debug(f'Kalamn initialized with state variance {StateVar} and observation variance {ObserVar}')
+        logger.debug(f'Kalamn initialized with state variance {StateVar:.4f} and observation variance {ObserVar:.4f}')
         return F, H, Q, R, ObservInd, initx, initP    
 
     def init_state(self, data):
@@ -130,6 +130,7 @@ class KalmanFilter:
         xpred = self.F @ self.x
         ypred = self.H @ xpred
         veloc   = (y.reshape((-1,1)) - ypred) / self.dT
+        veloc   = np.clip(veloc, -0.1/self.dT, 0.1/self.dT)
         self.x[self.observ_index + 1] = veloc
 
     def predict(self):

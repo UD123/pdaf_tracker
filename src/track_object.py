@@ -56,6 +56,11 @@ class TrackingObject:
         "check if the states are defined"
         return self.state != TrackState.UNDEFINED
     
+    def reset_state(self):
+        "sets the state to undefined"
+        self.state = TrackState.UNDEFINED    
+        return 
+    
     def predict(self):
         "predicting the state"
         # Prediction of the next state
