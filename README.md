@@ -43,6 +43,16 @@ Trajectory with Clutter   | Multiple Trajectories | Complex Trajectories |
 :------------: |  :----------: | :-------------:  |
 ![Trajectories](doc/plot2d.png)  | ![Trackers](doc/plot2d_2traj.png)  | ![Results](doc/plot2d_8.png)  |
 
+# Trackers 
+
+Multiple trackers are used to trace the trajectories. Each tracker is initialized from a random starting point. It uses second point to initialize velocity and direction.
+The same "data_generator.py" contains function "init_scenario()" that allows to select how many trackers, kalman parameters for initialization.
+
+
+Crossing Trackers   | Crossing Trajectories with Recover | One Trajectory Two trackers |
+:------------: |  :----------: | :-------------:  |
+![1](doc/cross_h_20.gif)  | ![Trackers](doc/crossing.gif)  | ![Results](doc/hunting.gif)  |
+
 # Usage:
 
 1. In python environment: 
