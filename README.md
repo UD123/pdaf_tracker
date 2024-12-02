@@ -2,9 +2,11 @@
 
 Multiple point tracker in 2D and 3D using Probability Density Approximation Filters (PDAF)
 
+[Show](doc/cross_h_20.gif)
+
 # Description
 
-Using IPDAF Filters to predict, track and estimate position of multiple points.
+Using PDAF Filters to predict, track and estimate position of multiple points.
 It can deal with occlusion, tracking loss, intersection and different point motion profiles.
 
 This code implements multiple target tracking in 2 and 3 dimensions using Numpy only. 
@@ -57,9 +59,13 @@ Trajectory with Clutter   | Multiple Trajectories | Complex Trajectories |
 
    <your path>\envs\pdaf\Scripts\activate.bat
 
-3. Install packages (just for visualization):
+3. Install packages :
 
-    pip install matplotlib
+    pip install numpy
+
+4. Install packages (just for visualization):
+
+    pip install matplotlib    
 
     
 
