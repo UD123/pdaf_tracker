@@ -2,7 +2,7 @@
 
 Multiple point tracker in 2D and 3D using Probability Density Approximation Filters (PDAF)
 
-[![Show](doc/cross_h_20.gif)]
+![Show](doc/cross_h_20.gif)
 
 # Description
 
